@@ -113,12 +113,13 @@ func aboutHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 	runtime.ReadMemStats(&ms)
 	s.ChannelMessageSendEmbed(m.ChannelID,
 		&discordgo.MessageEmbed{
-			Title: "Sobre mim",
+			Title: "<a:verificador:758830726920536085> Sobre mim",
 			Description: fmt.Sprintf(
-				"**Autor:** <@145199845685067776>\n"+
-					"**Runtime:**\n"+
-					"**- Sistema operacional/arquitetura:** %s %s/%s\n"+
-					"**- Memória (heap, alocado):** %d\n",
+				"**・ Developer:** <@145199845685067776>\n"+
+				"**・ UX:** <@508719784381382706>\n"+
+					"<a:runtime:758883655471857674> **Runtime:**\n"+
+					"**・ Sistema Operacional/Arquitetura:** %s %s/%s\n"+
+					"**・ Memória (heap, alocado):** %d\n",
 				osEmoji(runtime.GOOS), runtime.GOOS, runtime.GOARCH, ms.Alloc)})
 }
 
