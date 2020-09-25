@@ -1,3 +1,6 @@
-- Invite cooldown
 - Autoerase invite message after some time
 - A config format
+- A proper help command
+- A proper command system
+- Proper alises, command properties, etc
+- Code cleanup
