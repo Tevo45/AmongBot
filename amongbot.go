@@ -20,6 +20,7 @@ type command func([]string, *discordgo.Session, *discordgo.MessageCreate)
 var commands = map[string]command{
 	"ping":  pingHandler,
 	"about": aboutHandler,
+	"sobre": aboutHandler,
 	"c":     codeHandler,
 }
 
@@ -64,6 +65,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if cmd != nil {
 			cmd(cmdArgs[1:], s, m)
 		}
+		return
+	}
+
+	if containsUsr(m.Mentions, s.State.User) {
+		s.ChannelMessageSend(m.ChannelID, "Olá, meu prefixo é "+prefix)
+		return
 	}
 }
 
@@ -175,7 +182,8 @@ func osEmoji(s string) string {
 		"solaris":   "<:solaris:758875213961232404>",
 		"openbsd":   "<:puffy:758875557235654657>",
 		"netbsd":    "<:netbsd:758875679961514014>",
-		"plan9":     "<:glenda:758857214596874241>",
+//		"plan9":     "<:spaceglenda:758857214596874241>",
+		"plan9":     "<:glenda:758886314438295553>",
 		"freebsd":   "<:freebased:758864143792078910>",
 		"dragonfly": "<:dragonfly:758865198941077535>",
 		"darwin":    "<:applel:758863829764931625>"}
@@ -184,4 +192,13 @@ func osEmoji(s string) string {
 		return "❓"
 	}
 	return emojis[s]
+}
+
+func containsUsr(l []*discordgo.User, k *discordgo.User) bool {
+    for _, i := range l {
+        if i.ID == k.ID {
+            return true
+        }
+    }
+    return false
 }
