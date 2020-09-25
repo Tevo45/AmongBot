@@ -69,7 +69,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if containsUsr(m.Mentions, s.State.User) {
-		s.ChannelMessageSend(m.ChannelID, "Olá, meu prefixo é "+prefix)
+s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("<a:load:758855839497977857> *Opa, precisa de ajuda? meu prefixo é **'%s'**, caso precise de ajuda utilize **'%sajuda'***", prefix, prefix))
 		return
 	}
 }
