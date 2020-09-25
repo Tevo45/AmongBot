@@ -117,9 +117,9 @@ func aboutHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 			Description: fmt.Sprintf(
 				"**Autor:** <@145199845685067776>\n"+
 					"**Runtime:**\n"+
-					"**- Sistema operacional/arquitetura:** %s/%s\n"+
+					"**- Sistema operacional/arquitetura:** %s %s/%s\n"+
 					"**- Memória (heap, alocado):** %d\n",
-				runtime.GOOS, runtime.GOARCH, ms.Alloc)})
+				osEmoji(runtime.GOOS), runtime.GOOS, runtime.GOARCH, ms.Alloc)})
 }
 
 func maybeValidCode(c string) bool {
@@ -165,4 +165,22 @@ func mentions(usrs []string) (m string) {
 	}
 	m = m[2:]
 	return
+}
+
+func osEmoji(s string) string {
+	emojis := map[string]string{
+		"windows":   "<:windwos:758861126271631390>",
+		"linux":     "<:tux:758874037706948648>",
+		"solaris":   "<:solaris:758875213961232404>",
+		"openbsd":   "<:puffy:758875557235654657>",
+		"netbsd":    "<:netbsd:758875679961514014>",
+		"plan9":     "<:glenda:758857214596874241>",
+		"freebsd":   "<:freebased:758864143792078910>",
+		"dragonfly": "<:dragonfly:758865198941077535>",
+		"darwin":    "<:applel:758863829764931625>"}
+
+	if emojis[s] == "" {
+		return "❓"
+	}
+	return emojis[s]
 }
