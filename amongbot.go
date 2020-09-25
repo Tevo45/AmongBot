@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"regexp"
@@ -23,8 +24,12 @@ var commands = map[string]command{
 }
 
 func main() {
-	token := ioutil.ReadFile("token")
-	dg, err := discordgo.New("Bot " + token)
+	token, err := ioutil.ReadFile("token")
+	if err != nil {
+		fmt.Println("Unable to read token:", err)
+		return
+	}
+	dg, err := discordgo.New("Bot " + strings.Trim(string(token), " \n\t"))
 	if err != nil {
 		fmt.Println("Unable to initialize Discord session:", err)
 		return
