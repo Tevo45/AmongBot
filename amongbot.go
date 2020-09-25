@@ -75,7 +75,15 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if containsUsr(m.Mentions, s.State.User) {
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("<a:load:758855839497977857> *Opa, precisa de ajuda? meu prefixo é **'%s'**, caso precise de ajuda utilize **'%sajuda'***", prefix, prefix))
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
+			"<a:load:758855839497977857> *Opa, precisa de ajuda? meu prefixo é **'%s'**, caso precise de ajuda utilize **'%sajuda'***", prefix, prefix))
+		return
+	}
+
+	
+	if t, _ := regexp.Match("^[A-Z]{6}($| )", []byte(m.Content)); t {
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
+			"<a:load:758855839497977857> <@%s> Você sabia que temos um sistema de convite? `%sc <código da sala>`", m.Author.ID, prefix))
 		return
 	}
 }
@@ -86,23 +94,27 @@ func pingHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 
 func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	if len(args) != 1 {
-		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Acho que você esqueceu de adicionar o codigo, não?*")
+		s.ChannelMessageSend(m.ChannelID,
+			"<a:load:758855839497977857> *Acho que você esqueceu de adicionar o codigo, não?*")
 		return
 	}
 
 	if !maybeValidCode(args[0]) {
-		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Uhhh, acredito que seu código não esteja correto.*")
+		s.ChannelMessageSend(m.ChannelID,
+			"<a:load:758855839497977857> *Uhhh, acredito que seu código não esteja correto.*")
 		return
 	}
 
 	vs := getVoiceState(s, m.Author.ID, m.GuildID)
 	if vs == nil {
-		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Você não esta em nenhum canal de voz.*")
+		s.ChannelMessageSend(m.ChannelID,
+			"<a:load:758855839497977857> *Você não esta em nenhum canal de voz.*")
 		return
 	}
 
 	if rateLimiters[m.Author.ID] != nil {
-		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Você esta a enviar pedidos rapido demais, favor tentar novamente mais tarde.*")
+		s.ChannelMessageSend(m.ChannelID,
+			"<a:load:758855839497977857> *Você esta a enviar pedidos rapido demais, favor tentar novamente mais tarde.*")
 		return
 	}
 
