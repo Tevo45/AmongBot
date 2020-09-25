@@ -73,18 +73,18 @@ func pingHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 
 func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	if len(args) != 1 {
-		s.ChannelMessageSend(m.ChannelID, "Favor enviar um codigo")
+		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Acho que você esqueceu de adicionar o codigo, não?*")
 		return
 	}
 
 	if !maybeValidCode(args[0]) {
-		s.ChannelMessageSend(m.ChannelID, "Favor enviar um codigo valido")
+		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Uhhh, acredito que seu código não esteja correto.*")
 		return
 	}
 
 	vs := getVoiceState(s, m.Author.ID, m.GuildID)
 	if vs == nil {
-		s.ChannelMessageSend(m.ChannelID, "Você não esta em um canal de voz")
+		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Você não esta em nenhum canal de voz.*")
 		return
 	}
 
