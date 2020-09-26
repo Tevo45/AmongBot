@@ -59,7 +59,7 @@ func main() {
 		fmt.Println("Unable to read config file:", err)
 		return
 	}
-	dg, err := discordgo.New("Bot "+conf.Token, " \n\t")
+	dg, err := discordgo.New("Bot "+strings.Trim(conf.Token, "\n\t"))
 	if err != nil {
 		fmt.Println("Unable to initialize Discord session:", err)
 		return
