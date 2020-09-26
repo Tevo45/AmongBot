@@ -14,18 +14,28 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-const prefix = "%"
+//const prefix = "%"
+const prefix = "λ"
 
-type command func([]string, *discordgo.Session, *discordgo.MessageCreate)
+type cmdFunc func([]string, *discordgo.Session, *discordgo.MessageCreate)
+type command struct {
+	cmd  cmdFunc
+	help string
+}
 
-var commands = map[string]command{
-	"ping":     pingHandler,
-	"help":     stubHandler,
-	"ajuda":    stubHandler,
-	"comandos": stubHandler,
-	"about":    aboutHandler,
-	"sobre":    aboutHandler,
-	"c":        codeHandler,
+type cmdMap map[string]*command
+
+var commands = cmdMap{}
+
+func (c *cmdMap) add(cmd, help string, fn cmdFunc) {
+	// Nice syntax, bro
+	(*c)[cmd] = &command{
+		cmd: fn,
+		help: help}
+}
+
+func (c *cmdMap) alias(cmd, dest string) {
+	(*c)[cmd] = (*c)[dest]
 }
 
 var rateLimiters = map[string]<-chan time.Time{}
@@ -43,6 +53,16 @@ func main() {
 	}
 
 	dg.AddHandler(messageCreate)
+
+	// Nice repetition, bro
+	commands.add("help", "Ajuda ae po", helpHandler)
+	commands.alias("ajuda", "help")
+	commands.alias("comandos", "help")
+
+	commands.add("ping", "Manda um oi ae", pingHandler)
+	commands.alias("eae", "ping")
+
+	commands.add("c", "Avisa o povo", codeHandler)
 
 	err = dg.Open()
 	if err != nil {
@@ -69,7 +89,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		cmdStr = strings.Replace(cmdStr, prefix, "", 1)
 		cmd := commands[cmdStr]
 		if cmd != nil {
-			cmd(cmdArgs[1:], s, m)
+			cmd.cmd(cmdArgs[1:], s, m)
 		}
 		return
 	}
@@ -165,6 +185,26 @@ func aboutHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 func stubHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	s.ChannelMessageSend(m.ChannelID, "Ainda não po")
 }
+
+func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	if len(args) == 0 {
+		cmds := ""
+		for k, _ := range commands {
+			cmds += k+"\n"
+		}
+		s.ChannelMessageSend(m.ChannelID, cmds)
+	}
+
+	cmdNam := args[0]
+	cmd := commands[cmdNam]
+	if cmd == nil {
+		s.ChannelMessageSend(m.ChannelID, "Comando inexistente")
+		return
+	}
+	s.ChannelMessageSend(m.ChannelID, cmd.help)
+}
+
+/*** Utilities ***/
 
 func maybeValidCode(c string) bool {
 	r, err := regexp.Match("^[A-Za-z]{6}$", []byte(c))
