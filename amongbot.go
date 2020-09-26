@@ -68,11 +68,10 @@ func main() {
 	dg.AddHandler(messageCreate)
 
 	// Nice repetition, bro
-	commands.add("help", "*abre a lista de comandos*", helpHandler)
-
-	commands.add("sobre", "*mostra autores, e como sistema está rodando*", aboutHandler)
-
-	commands.add("invite", "*entre no servidor de suporte*", inviteHandler)
+	commands.add("help", "abre a lista de comandos", helpHandler)
+	commands.add("sobre", "mostra autores, e como sistema está rodando", aboutHandler)
+	commands.add("invite", "entre no servidor de suporte", inviteHandler)
+	commands.add("c", "convida pessoas no mesmo canal de voz para uma partida de Among Us", codeHandler)
 
 	err = dg.Open()
 	if err != nil {
@@ -233,7 +232,7 @@ func stubHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	cmds := ""
 	for k, cmd := range commands {
-		cmds += fmt.Sprintf("**・ %s:** %s\n", strings.Title(k), cmd.help)
+		cmds += fmt.Sprintf("**・ %s:** *%s*\n", strings.Title(k), cmd.help)
 	}
 	s.ChannelMessageSendEmbed(m.ChannelID,
 		&discordgo.MessageEmbed{
