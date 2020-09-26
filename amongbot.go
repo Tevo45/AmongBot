@@ -189,21 +189,11 @@ func stubHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 }
 
 func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
-	if len(args) == 0 {
-		cmds := ""
-		for k, _ := range commands {
-			cmds += k+"\n"
-		}
-		s.ChannelMessageSend(m.ChannelID, cmds)
+	cmds := ""
+	for k, cmd := range commands {
+		cmds += fmt.Sprintf("**%s:** %s\n", k, cmd.help)
 	}
-
-	cmdNam := args[0]
-	cmd := commands[cmdNam]
-	if cmd == nil {
-		s.ChannelMessageSend(m.ChannelID, "Comando inexistente")
-		return
-	}
-	s.ChannelMessageSend(m.ChannelID, cmd.help)
+	s.ChannelMessageSend(m.ChannelID, cmds)
 }
 
 /*** Utilities ***/
