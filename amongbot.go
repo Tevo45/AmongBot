@@ -70,7 +70,7 @@ func main() {
 	// Nice repetition, bro
 	commands.add("help", "*abre a lista de comandos*", helpHandler)
 
-	commands.add("sobre", "*mostra autores, e como sistema está rodando*", pingHandler)
+	commands.add("sobre", "*mostra autores, e como sistema está rodando*", aboutHandler)
 
 	commands.add("invite", "*entre no servidor de suporte*", inviteHandler)
 
