@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,11 +13,20 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/pelletier/go-toml"
 )
 
-//const prefix = "%"
-const prefix = "λ"
-const inviteUrl = "http://amongbotserver.tk/"
+type config struct {
+	Token     string
+	Prefix    string
+	InviteUrl string `comment:"URL for a support server invite"`
+	Assets    botAssets
+}
+
+/* FIXME The TOML encoder does not marshal maps */
+type botAssets struct {
+	//	OsEmojis map[string]string	`comment:"Emojis for the values of GOOS, for the about command"`
+}
 
 type cmdFunc func([]string, *discordgo.Session, *discordgo.MessageCreate)
 type command struct {
@@ -26,12 +36,16 @@ type command struct {
 
 type cmdMap map[string]*command
 
-var commands = cmdMap{}
+var (
+	conf         = config{}
+	commands     = cmdMap{}
+	rateLimiters = map[string]<-chan time.Time{}
+)
 
 func (c *cmdMap) add(cmd, help string, fn cmdFunc) {
 	// Nice syntax, bro
 	(*c)[cmd] = &command{
-		cmd: fn,
+		cmd:  fn,
 		help: help}
 }
 
@@ -39,15 +53,13 @@ func (c *cmdMap) alias(cmd, dest string) {
 	(*c)[cmd] = (*c)[dest]
 }
 
-var rateLimiters = map[string]<-chan time.Time{}
-
 func main() {
-	token, err := ioutil.ReadFile("token")
+	err := getConfig("config.toml")
 	if err != nil {
-		fmt.Println("Unable to read token:", err)
+		fmt.Println("Unable to read config file:", err)
 		return
 	}
-	dg, err := discordgo.New("Bot " + strings.Trim(string(token), " \n\t"))
+	dg, err := discordgo.New("Bot "+conf.Token, " \n\t")
 	if err != nil {
 		fmt.Println("Unable to initialize Discord session:", err)
 		return
@@ -68,7 +80,7 @@ func main() {
 		return
 	}
 
-dg.UpdateStatus(0, fmt.Sprintf("%shelp | amongbot.tk", prefix))
+	dg.UpdateStatus(0, fmt.Sprintf("%shelp | amongbot.tk", conf.Prefix))
 
 	fmt.Println("Bot is up!")
 	sc := make(chan os.Signal, 1)
@@ -78,15 +90,39 @@ dg.UpdateStatus(0, fmt.Sprintf("%shelp | amongbot.tk", prefix))
 	dg.Close()
 }
 
+func getConfig(path string) error {
+	tomlConf, err := ioutil.ReadFile(path)
+	if os.IsNotExist(err) {
+		newConf, err := toml.Marshal(conf)
+		if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(path, newConf, 0666)
+		if err != nil {
+			return err
+		}
+		return errors.New(
+			fmt.Sprintf("no config found. please review the new values at %s and try again", path))
+	}
+	if err != nil {
+		return err
+	}
+	err = toml.Unmarshal(tomlConf, &conf)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
 
-	if strings.HasPrefix(m.Content, prefix) {
+	if strings.HasPrefix(m.Content, conf.Prefix) {
 		cmdArgs := strings.Split(m.Content, " ")
 		cmdStr := cmdArgs[0]
-		cmdStr = strings.Replace(cmdStr, prefix, "", 1)
+		cmdStr = strings.Replace(cmdStr, conf.Prefix, "", 1)
 		cmd := commands[cmdStr]
 		if cmd != nil {
 			cmd.cmd(cmdArgs[1:], s, m)
@@ -96,14 +132,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if containsUsr(m.Mentions, s.State.User) {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
-			"<a:load:758855839497977857> *Opa, precisa de ajuda? meu prefixo é **'%s'**, caso precise de ajuda utilize **'%sajuda'***", prefix, prefix))
+			"<a:load:758855839497977857> *Opa, precisa de ajuda? meu prefixo é **'%s'**, caso precise de ajuda utilize **'%sajuda'***", conf.Prefix, conf.Prefix))
 		return
 	}
 
-	
 	if t, _ := regexp.Match("^[A-Z]{6}($| )", []byte(m.Content)); t {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
-			"<a:load:758855839497977857> <@%s> Você sabia que temos um sistema de convite? `%sc <código da sala>`", m.Author.ID, prefix))
+			"<a:load:758855839497977857> <@%s> Você sabia que temos um sistema de convite? `%sc <código da sala>`", m.Author.ID, conf.Prefix))
 		return
 	}
 }
@@ -113,14 +148,14 @@ func pingHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 }
 
 func inviteHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
-    s.ChannelMessageSendEmbed(m.ChannelID,
-        &discordgo.MessageEmbed{
-            Title: "<a:verificador:758830726920536085> Convite - Support Server",
-            Description: fmt.Sprintf("<a:load:758855839497977857>  [**Support Server' AmongBot**](%s)\n\n:flag_br: ・ *clique no link acima para acessar nosso servidor de suporte!*\n:flag_us: ・ *click the link above to access our support server!*", inviteUrl),
-            Thumbnail: &discordgo.MessageEmbedThumbnail{
-              URL: "https://pdhl.s-ul.eu/rwiJsTTC"}})
-}      
-      
+	s.ChannelMessageSendEmbed(m.ChannelID,
+		&discordgo.MessageEmbed{
+			Title:       "<a:verificador:758830726920536085> Convite - Support Server",
+			Description: fmt.Sprintf("<a:load:758855839497977857>  [**Support Server' AmongBot**](%s)\n\n:flag_br: ・ *clique no link acima para acessar nosso servidor de suporte!*\n:flag_us: ・ *click the link above to access our support server!*", conf.InviteUrl),
+			Thumbnail: &discordgo.MessageEmbedThumbnail{
+				URL: "https://pdhl.s-ul.eu/rwiJsTTC"}})
+}
+
 func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	if len(args) != 1 {
 		s.ChannelMessageSend(m.ChannelID,
@@ -200,10 +235,10 @@ func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 	for k, cmd := range commands {
 		cmds += fmt.Sprintf("**・ %s:** %s\n", strings.Title(k), cmd.help)
 	}
-	s.ChannelMessageSendEmbed(m.ChannelID, 
-  		&discordgo.MessageEmbed{
-    		Title: "<a:verificador:758830726920536085> Help",
-    		Description: cmds})
+	s.ChannelMessageSendEmbed(m.ChannelID,
+		&discordgo.MessageEmbed{
+			Title:       "<a:verificador:758830726920536085> Help",
+			Description: cmds})
 }
 
 /*** Utilities ***/
