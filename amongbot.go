@@ -16,6 +16,7 @@ import (
 
 //const prefix = "%"
 const prefix = "λ"
+const inviteUrl = "http://amongbotserver.tk/"
 
 type cmdFunc func([]string, *discordgo.Session, *discordgo.MessageCreate)
 type command struct {
@@ -55,14 +56,11 @@ func main() {
 	dg.AddHandler(messageCreate)
 
 	// Nice repetition, bro
-	commands.add("help", "Ajuda ae po", helpHandler)
-	commands.alias("ajuda", "help")
-	commands.alias("comandos", "help")
+	commands.add("help", "*abre a lista de comandos*", helpHandler)
 
-	commands.add("ping", "Manda um oi ae", pingHandler)
-	commands.alias("eae", "ping")
+	commands.add("sobre", "*mostra autores, e como sistema está rodando*", pingHandler)
 
-	commands.add("c", "Avisa o povo", codeHandler)
+	commands.add("invite", "*entre no servidor de suporte*", inviteHandler)
 
 	err = dg.Open()
 	if err != nil {
@@ -114,6 +112,15 @@ func pingHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 	s.ChannelMessageSend(m.ChannelID, ")/")
 }
 
+func inviteHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+    s.ChannelMessageSendEmbed(m.ChannelID,
+        &discordgo.MessageEmbed{
+            Title: "<a:verificador:758830726920536085> Convite - Support Server",
+            Description: fmt.Sprintf("<a:load:758855839497977857>  [**Support Server' AmongBot**](%s)\n\n:flag_br: ・ *clique no link acima para acessar nosso servidor de suporte!*\n:flag_us: ・ *click the link above to access our support server!*", inviteUrl),
+            Thumbnail: &discordgo.MessageEmbedThumbnail{
+              URL: "https://pdhl.s-ul.eu/rwiJsTTC"}})
+}      
+      
 func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	if len(args) != 1 {
 		s.ChannelMessageSend(m.ChannelID,
@@ -191,9 +198,12 @@ func stubHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	cmds := ""
 	for k, cmd := range commands {
-		cmds += fmt.Sprintf("**%s:** %s\n", k, cmd.help)
+		cmds += fmt.Sprintf("**・ %s:** %s\n", strings.Title(k), cmd.help)
 	}
-	s.ChannelMessageSend(m.ChannelID, cmds)
+	s.ChannelMessageSendEmbed(m.ChannelID, 
+  		&discordgo.MessageEmbed{
+    		Title: "<a:verificador:758830726920536085> Help",
+    		Description: cmds})
 }
 
 /*** Utilities ***/
