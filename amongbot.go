@@ -70,7 +70,7 @@ func main() {
 		return
 	}
 
-	dg.UpdateStatus(0, "Among Us")
+dg.UpdateStatus(0, fmt.Sprintf("%shelp | amongbot.tk", prefix))
 
 	fmt.Println("Bot is up!")
 	sc := make(chan os.Signal, 1)
