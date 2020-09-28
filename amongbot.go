@@ -19,7 +19,7 @@ import (
 type config struct {
 	Token     string
 	Prefix    string
-	InviteUrl string `comment:"URL for a support server invite"`
+	InviteUrl string `comment:"Insert URL invite link"`
 	Assets    botAssets
 }
 
@@ -147,12 +147,13 @@ func pingHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 }
 
 func inviteHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
-	s.ChannelMessageSendEmbed(m.ChannelID,
-		&discordgo.MessageEmbed{
-			Title:       "<a:verificador:758830726920536085> Convite - Support Server",
-			Description: fmt.Sprintf("<a:load:758855839497977857>  [**Support Server' AmongBot**](%s)\n\n:flag_br: ・ *clique no link acima para acessar nosso servidor de suporte!*\n:flag_us: ・ *click the link above to access our support server!*", conf.InviteUrl),
-			Thumbnail: &discordgo.MessageEmbedThumbnail{
-				URL: "https://pdhl.s-ul.eu/rwiJsTTC"}})
+    s.ChannelMessageSendEmbed(m.ChannelID,
+        &discordgo.MessageEmbed{
+            Title:"<a:redbit:759943137581203527> Convite - Support Server",
+            Description: fmt.Sprintf("<a:runtime:758883655471857674> *Support Server' AmongBot* \n[**・ Entrar no Servidor**](%s)", conf.InviteUrl),
+            Color: 0xC02000,
+            Thumbnail: &discordgo.MessageEmbedThumbnail{
+                URL: "https://pdhl.s-ul.eu/rwiJsTTC"}})
 }
 
 func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -213,8 +214,11 @@ func aboutHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 	runtime.ReadMemStats(&ms)
 	s.ChannelMessageSendEmbed(m.ChannelID,
 		&discordgo.MessageEmbed{
-			Title:       "<a:verificador:758830726920536085> Sobre mim",
-			Description: "**・ Developer:** <@145199845685067776>\n**・ UX:** <@508719784381382706>\n",
+			Title:       "<a:redbit:759943137581203527> Sobre mim",
+			Description: "**・ Developer:** <@145199845685067776>\n**・ User Expirence:** <@508719784381382706>\n",
+			Color: 0xC02000,
+			Thumbnail: &discordgo.MessageEmbedThumbnail{
+                URL: "https://pdhl.s-ul.eu/rwiJsTTC"},
 			Fields: []*discordgo.MessageEmbedField{
 				&discordgo.MessageEmbedField{
 					Name:   "<a:runtime:758883655471857674> **Runtime:**",
