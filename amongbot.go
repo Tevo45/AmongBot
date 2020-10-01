@@ -68,10 +68,11 @@ func main() {
 	dg.AddHandler(messageCreate)
 
 	// Nice repetition, bro
-	commands.add("help", "abre a lista de comandos", helpHandler)
-	commands.add("sobre", "mostra autores, e como sistema está rodando", aboutHandler)
-	commands.add("invite", "entre no servidor de suporte", inviteHandler)
-	commands.add("c", "convida pessoas no mesmo canal de voz para uma partida de Among Us", codeHandler)
+	commands.add("help", "abre a lista de comandos e os especifica.", helpHandler)
+	commands.add("sobre", "mostra autores, como e aonde sistema está rodando.", aboutHandler)
+	commands.add("invite", "entre em nosso servidor para obter suporte.", inviteHandler)
+	commands.add("c", "convida pessoas no seu mesmo canal de voz para uma partida.", codeHandler)
+	commands.add("servers", "lista todos os servidores em que fui adiocionado.", serversHandler)
 
 	err = dg.Open()
 	if err != nil {
@@ -131,7 +132,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if containsUsr(m.Mentions, s.State.User) {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
-			"<a:load:758855839497977857> *Opa, precisa de ajuda? meu prefixo é **'%s'**, caso precise de ajuda utilize **'%sajuda'***", conf.Prefix, conf.Prefix))
+			"<a:load:758855839497977857> *Opa, precisa de ajuda? meu prefixo é **'%s'**, caso precise de ajuda utilize **'%shelp'***", conf.Prefix, conf.Prefix))
 		return
 	}
 
@@ -153,13 +154,13 @@ func inviteHandler(args []string, s *discordgo.Session, m *discordgo.MessageCrea
             Description: fmt.Sprintf("<a:runtime:758883655471857674> *Support Server' AmongBot* \n[**・ Entrar no Servidor**](%s)", conf.InviteUrl),
             Color: 0xC02000,
             Thumbnail: &discordgo.MessageEmbedThumbnail{
-                URL: "https://pdhl.s-ul.eu/rwiJsTTC"}})
+                URL: "https://pdhl.s-ul.eu/FX37PeEg"}})
 }
 
 func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	if len(args) != 1 {
 		s.ChannelMessageSend(m.ChannelID,
-			"<a:load:758855839497977857> *Acho que você esqueceu de adicionar o codigo, não?*")
+			"<a:load:758855839497977857> *Acho que você esqueceu de adicionar o código, não?*")
 		return
 	}
 
@@ -172,13 +173,13 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 	vs := getVoiceState(s, m.Author.ID, m.GuildID)
 	if vs == nil {
 		s.ChannelMessageSend(m.ChannelID,
-			"<a:load:758855839497977857> *Você não esta em nenhum canal de voz.*")
+			"<a:load:758855839497977857> *Você não está em nenhum canal de voz.*")
 		return
 	}
 
 	if rateLimiters[m.Author.ID] != nil {
 		s.ChannelMessageSend(m.ChannelID,
-			"<a:load:758855839497977857> *Você esta a enviar pedidos rapido demais, favor tentar novamente mais tarde.*")
+			"<a:load:758855839497977857> *Você está a enviar pedidos rápido demais, tente novamente mais tarde.*")
 		return
 	}
 
@@ -198,8 +199,9 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 		&discordgo.MessageSend{
 			Content: fmt.Sprintf("||%s||", mentions(callUsers)),
 			Embed: &discordgo.MessageEmbed{
-				Title:       fmt.Sprintf("<a:verificador:758830726920536085> Convite - %s", chann.Name),
-				Description: fmt.Sprintf("**Código:** %s", args[0])}})
+				Title:       fmt.Sprintf("<a:redbit:759943137581203527> Convite - %s", chann.Name),
+				Color: 0xC02000,
+				Description: fmt.Sprintf("**・Código:** %s", args[0])}})
 
 	go func() {
 		uid := m.Author.ID
@@ -218,7 +220,7 @@ func aboutHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 			Description: "**・ Developer:** <@145199845685067776>\n**・ User Expirence:** <@508719784381382706>\n",
 			Color: 0xC02000,
 			Thumbnail: &discordgo.MessageEmbedThumbnail{
-                URL: "https://pdhl.s-ul.eu/rwiJsTTC"},
+                URL: "https://pdhl.s-ul.eu/FX37PeEg"},
 			Fields: []*discordgo.MessageEmbedField{
 				&discordgo.MessageEmbedField{
 					Name:   "<a:runtime:758883655471857674> **Runtime:**",
@@ -227,6 +229,14 @@ func aboutHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 						"**・ Sistema Operacional/Arquitetura:** %s %s/%s\n"+
 							"**・ Memória (heap, alocado):** %d\n",
 						osEmoji(runtime.GOOS), runtime.GOOS, runtime.GOARCH, ms.Alloc)}}})
+}
+
+func serversHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+    guildNames := ""
+    for _, guild := range s.State.Guilds {
+        guildNames += fmt.Sprintf("%s\n", guild.Name)
+    }
+    s.ChannelMessageSend(m.ChannelID, guildNames)
 }
 
 func stubHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -240,8 +250,11 @@ func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 	}
 	s.ChannelMessageSendEmbed(m.ChannelID,
 		&discordgo.MessageEmbed{
-			Title:       "<a:verificador:758830726920536085> Help",
-			Description: cmds})
+			Title: fmt.Sprintf("<a:redbit:759943137581203527> Comandos - %s'prefix", conf.Prefix),
+			Description: cmds,
+			Color: 0xC02000,
+            Thumbnail: &discordgo.MessageEmbedThumbnail{
+                URL: "https://pdhl.s-ul.eu/FX37PeEg"}})
 }
 
 /*** Utilities ***/
