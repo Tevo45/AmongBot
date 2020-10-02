@@ -161,21 +161,69 @@ func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 func srvHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	names := ""
 	em := map[string]*discordgo.Emoji{}
-	// TODO Make this parallel
+	wrks := make([]chan string, 0)
 	// TODO GIFs
 	for _, g := range s.State.Guilds {
-		e := registerGuildEmoji(s, g)
-		if e != nil {
-			em[g.ID] = e
-			names += e.MessageFormat()
-		}
-		names += fmt.Sprintf("** ∙ %s**\n", g.Name)
+		chann := make(chan string, 1)
+		wrks = append(wrks, chann)
+		go func(c chan string, g *discordgo.Guild) {
+			e := registerGuildEmoji(s, g)
+			ret := ""
+
+			if e != nil {
+				em[g.ID] = e
+				ret += e.MessageFormat()
+			} else {
+				ret += "<:default:761420942072610817>"
+			}
+			ret += fmt.Sprintf("** ∙ %s**\n", g.Name)
+			c <- ret
+		}(chann, g)
+	}
+	for _, c := range wrks {
+		names += <-c
 	}
 	s.ChannelMessageSend(m.ChannelID, names)
 	for srv, emoji := range em {
+		// FIXME Paralelize removal
 		err := s.GuildEmojiDelete(conf.EmoteGuild, emoji.ID)
 		if err != nil {
 			fmt.Printf("failed to remove listing emoji for guild %s: %s\n", srv, err)
 		}
 	}
+}
+
+/*** Play ***/
+
+func matchHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	vs := getVoiceState(s, m.Author.ID, m.GuildID)
+	if vs == nil {
+		s.ChannelMessageSend(m.ChannelID,
+			"<a:load:758855839497977857> *Você não esta em nenhum canal de voz.*")
+		return
+	}
+	inv, err := s.ChannelInviteCreate(vs.ChannelID,
+		discordgo.Invite{
+			MaxAge:    3600, // An hour
+			MaxUses:   10,   // Rather arbitrary
+			Temporary: false,
+		})
+	if err != nil {
+		s.ChannelMessageSend(m.ChannelID,
+			fmt.Sprintf("Não foi possivel criar um convte: %s", err))
+		return
+	}
+
+	callUsers := getCallMembers(s, vs.ChannelID, vs.GuildID)
+	players := len(callUsers) // FIXME Is there a better way to get number of people on voice chan?
+
+	s.ChannelMessageSendEmbed(m.ChannelID, &discordgo.MessageEmbed{
+		Title: "<a:redbit:759943137581203527> **Matchmaking**\n",
+		Description: fmt.Sprintf(
+			"%s está a procurar pessoas para jogar!\n"+
+				"<:INTERFONEAMONG:758198140779233321> **Canal:** <#%s>"+
+				"<:preto:760991599899312169>**Players:** %d\n"+
+				"<:aponta:761444193906065418> [Juntar-se](https://discord.gg/%s)",
+			m.Author.Mention(), vs.ChannelID, players, inv.Code),
+	})
 }

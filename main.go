@@ -37,6 +37,7 @@ func main() {
 	commands.add("c", "convida pessoas no mesmo canal de voz para uma partida.", codeHandler)
 	commands.add("servers", "lista todos os servidores em que fui adicionado.", srvHandler)
 	commands.add("ping", "veja se estou vivo!", pingHandler)
+	commands.add("play", "like, matchmaking bro‽", matchHandler)
 
 	err = dg.Open()
 	if err != nil {

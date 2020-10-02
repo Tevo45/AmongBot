@@ -1,3 +1,4 @@
 - Autoerase invite message after some time
 - Code cleanup (still, kinda)
 - Proper aliases
+- Paging on srvHandler
