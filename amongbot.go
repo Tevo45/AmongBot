@@ -1,8 +1,14 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/png"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -17,10 +23,16 @@ import (
 )
 
 type config struct {
-	Token     string
-	Prefix    string
-	InviteUrl string `comment:"Insert URL invite link"`
-	Assets    botAssets
+	Token      string
+	Prefix     string
+	InviteUrl  string `comment:"URL for a support server invite"`
+	EmoteGuild string
+	Assets     botAssets
+}
+
+type circle struct {
+	p image.Point
+	r int
 }
 
 /* FIXME The TOML encoder does not marshal maps */
@@ -59,7 +71,7 @@ func main() {
 		fmt.Println("Unable to read config file:", err)
 		return
 	}
-	dg, err := discordgo.New("Bot "+strings.Trim(conf.Token, "\n\t"))
+	dg, err := discordgo.New("Bot " + strings.Trim(conf.Token, "\n\t"))
 	if err != nil {
 		fmt.Println("Unable to initialize Discord session:", err)
 		return
@@ -68,11 +80,11 @@ func main() {
 	dg.AddHandler(messageCreate)
 
 	// Nice repetition, bro
-	commands.add("help", "abre a lista de comandos e os especifica.", helpHandler)
-	commands.add("sobre", "mostra autores, como e aonde sistema está rodando.", aboutHandler)
-	commands.add("invite", "entre em nosso servidor para obter suporte.", inviteHandler)
-	commands.add("c", "convida pessoas no seu mesmo canal de voz para uma partida.", codeHandler)
-	commands.add("servers", "lista todos os servidores em que fui adiocionado.", serversHandler)
+	commands.add("help", "abre a lista de comandos", helpHandler)
+	commands.add("sobre", "mostra autores, e como sistema está rodando", aboutHandler)
+	commands.add("invite", "entre no servidor de suporte", inviteHandler)
+	commands.add("c", "convida pessoas no mesmo canal de voz para uma partida de Among Us", codeHandler)
+	commands.add("servers", "", srvHandler)
 
 	err = dg.Open()
 	if err != nil {
@@ -132,7 +144,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	if containsUsr(m.Mentions, s.State.User) {
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
-			"<a:load:758855839497977857> *Opa, precisa de ajuda? meu prefixo é **'%s'**, caso precise de ajuda utilize **'%shelp'***", conf.Prefix, conf.Prefix))
+			"<a:load:758855839497977857> *Opa, precisa de ajuda? meu prefixo é **'%s'**, caso precise de ajuda utilize **'%sajuda'***", conf.Prefix, conf.Prefix))
 		return
 	}
 
@@ -148,19 +160,18 @@ func pingHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 }
 
 func inviteHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
-    s.ChannelMessageSendEmbed(m.ChannelID,
-        &discordgo.MessageEmbed{
-            Title:"<a:redbit:759943137581203527> Convite - Support Server",
-            Description: fmt.Sprintf("<a:runtime:758883655471857674> *Support Server' AmongBot* \n[**・ Entrar no Servidor**](%s)", conf.InviteUrl),
-            Color: 0xC02000,
-            Thumbnail: &discordgo.MessageEmbedThumbnail{
-                URL: "https://pdhl.s-ul.eu/FX37PeEg"}})
+	s.ChannelMessageSendEmbed(m.ChannelID,
+		&discordgo.MessageEmbed{
+			Title:       "<a:verificador:758830726920536085> Convite - Support Server",
+			Description: fmt.Sprintf("<a:load:758855839497977857>  [**Support Server' AmongBot**](%s)\n\n:flag_br: ・ *clique no link acima para acessar nosso servidor de suporte!*\n:flag_us: ・ *click the link above to access our support server!*", conf.InviteUrl),
+			Thumbnail: &discordgo.MessageEmbedThumbnail{
+				URL: "https://pdhl.s-ul.eu/rwiJsTTC"}})
 }
 
 func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	if len(args) != 1 {
 		s.ChannelMessageSend(m.ChannelID,
-			"<a:load:758855839497977857> *Acho que você esqueceu de adicionar o código, não?*")
+			"<a:load:758855839497977857> *Acho que você esqueceu de adicionar o codigo, não?*")
 		return
 	}
 
@@ -173,13 +184,13 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 	vs := getVoiceState(s, m.Author.ID, m.GuildID)
 	if vs == nil {
 		s.ChannelMessageSend(m.ChannelID,
-			"<a:load:758855839497977857> *Você não está em nenhum canal de voz.*")
+			"<a:load:758855839497977857> *Você não esta em nenhum canal de voz.*")
 		return
 	}
 
 	if rateLimiters[m.Author.ID] != nil {
 		s.ChannelMessageSend(m.ChannelID,
-			"<a:load:758855839497977857> *Você está a enviar pedidos rápido demais, tente novamente mais tarde.*")
+			"<a:load:758855839497977857> *Você esta a enviar pedidos rapido demais, favor tentar novamente mais tarde.*")
 		return
 	}
 
@@ -199,9 +210,8 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 		&discordgo.MessageSend{
 			Content: fmt.Sprintf("||%s||", mentions(callUsers)),
 			Embed: &discordgo.MessageEmbed{
-				Title:       fmt.Sprintf("<a:redbit:759943137581203527> Convite - %s", chann.Name),
-				Color: 0xC02000,
-				Description: fmt.Sprintf("**・Código:** %s", args[0])}})
+				Title:       fmt.Sprintf("<a:verificador:758830726920536085> Convite - %s", chann.Name),
+				Description: fmt.Sprintf("**Código:** %s", args[0])}})
 
 	go func() {
 		uid := m.Author.ID
@@ -216,11 +226,8 @@ func aboutHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 	runtime.ReadMemStats(&ms)
 	s.ChannelMessageSendEmbed(m.ChannelID,
 		&discordgo.MessageEmbed{
-			Title:       "<a:redbit:759943137581203527> Sobre mim",
-			Description: "**・ Developer:** <@145199845685067776>\n**・ User Expirence:** <@508719784381382706>\n",
-			Color: 0xC02000,
-			Thumbnail: &discordgo.MessageEmbedThumbnail{
-                URL: "https://pdhl.s-ul.eu/FX37PeEg"},
+			Title:       "<a:verificador:758830726920536085> Sobre mim",
+			Description: "**・ Developer:** <@145199845685067776>\n**・ UX:** <@508719784381382706>\n",
 			Fields: []*discordgo.MessageEmbedField{
 				&discordgo.MessageEmbedField{
 					Name:   "<a:runtime:758883655471857674> **Runtime:**",
@@ -229,14 +236,6 @@ func aboutHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 						"**・ Sistema Operacional/Arquitetura:** %s %s/%s\n"+
 							"**・ Memória (heap, alocado):** %d\n",
 						osEmoji(runtime.GOOS), runtime.GOOS, runtime.GOARCH, ms.Alloc)}}})
-}
-
-func serversHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
-    guildNames := ""
-    for _, guild := range s.State.Guilds {
-        guildNames += fmt.Sprintf("%s\n", guild.Name)
-    }
-    s.ChannelMessageSend(m.ChannelID, guildNames)
 }
 
 func stubHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -250,11 +249,30 @@ func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 	}
 	s.ChannelMessageSendEmbed(m.ChannelID,
 		&discordgo.MessageEmbed{
-			Title: fmt.Sprintf("<a:redbit:759943137581203527> Comandos - %s'prefix", conf.Prefix),
-			Description: cmds,
-			Color: 0xC02000,
-            Thumbnail: &discordgo.MessageEmbedThumbnail{
-                URL: "https://pdhl.s-ul.eu/FX37PeEg"}})
+			Title:       "<a:verificador:758830726920536085> Help",
+			Description: cmds})
+}
+
+func srvHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	names := ""
+	em := map[string]*discordgo.Emoji{}
+	// TODO Make this parallel
+	// TODO GIFs
+	for _, g := range s.State.Guilds {
+		e := registerGuildEmoji(s, g)
+		if e != nil {
+			em[g.ID] = e
+			names += e.MessageFormat()
+		}
+		names += fmt.Sprintf("** ∙ %s**\n", g.Name)
+	}
+	s.ChannelMessageSend(m.ChannelID, names)
+	for srv, emoji := range em {
+		err := s.GuildEmojiDelete(conf.EmoteGuild, emoji.ID)
+		if err != nil {
+			fmt.Printf("failed to remove listing emoji for guild %s: %s\n", srv, err)
+		}
+	}
 }
 
 /*** Utilities ***/
@@ -330,4 +348,59 @@ func containsUsr(l []*discordgo.User, k *discordgo.User) bool {
 		}
 	}
 	return false
+}
+
+func registerGuildEmoji(s *discordgo.Session, g *discordgo.Guild) *discordgo.Emoji {
+	img, err := s.GuildIcon(g.ID)
+	if err != nil {
+		fmt.Printf("server %s likely has no icon, ignoring (err: %s)\n", g.ID, err)
+		return nil
+	}
+	bd := img.Bounds()
+	cn := center(bd)
+	circleImg := image.NewRGBA(bd)
+	draw.DrawMask(circleImg, bd, img, image.ZP, &circle{cn, bd.Min.X - cn.X}, image.ZP, draw.Over)
+	iUrl, err := encodeImg(circleImg)
+	if err != nil {
+		fmt.Printf("failed to encode icon for %s: %s\n", g.ID, err)
+		return nil
+	}
+	e, err := s.GuildEmojiCreate(conf.EmoteGuild, g.ID, iUrl, nil)
+	if err != nil {
+		fmt.Printf("failed to add emoji for guild %s: %s\n", g.ID, err)
+		return nil
+	}
+	return e
+}
+
+func encodeImg(i image.Image) (string, error) {
+	out := new(bytes.Buffer)
+	err := png.Encode(out, i)
+	if err != nil {
+		return "", err
+	}
+	b64str := base64.StdEncoding.EncodeToString(out.Bytes())
+	return fmt.Sprint("data:image/png;base64,", b64str), nil
+}
+
+func center(rect image.Rectangle) image.Point {
+	return image.Point{(rect.Max.X - rect.Min.X) / 2, (rect.Max.Y - rect.Min.Y) / 2}
+}
+
+/* Shamelessly copy-pasted from https://blog.golang.org/image-draw */
+
+func (c *circle) ColorModel() color.Model {
+	return color.AlphaModel
+}
+
+func (c *circle) Bounds() image.Rectangle {
+	return image.Rect(c.p.X-c.r, c.p.Y-c.r, c.p.X+c.r, c.p.Y+c.r)
+}
+
+func (c *circle) At(x, y int) color.Color {
+	xx, yy, rr := float64(x-c.p.X)+0.5, float64(y-c.p.Y)+0.5, float64(c.r)
+	if xx*xx+yy*yy < rr*rr {
+		return color.Alpha{255}
+	}
+	return color.Alpha{0}
 }

@@ -1,5 +1,5 @@
 
-TARGETDIR=/sys/lib/amongbot
+TARGETDIR=/cfg/$sysname/autostart
 GOSRC=`{walk | grep '\.go$'}
 
 amongbot: $GOSRC
