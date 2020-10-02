@@ -79,10 +79,7 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 		msg, _ := s.ChannelMessageSend(m.ChannelID,
 			fmt.Sprintf("%s Já tem uma mensagem po", m.Author.Mention()))
 		s.ChannelMessageDelete(m.ChannelID, m.ID)
-		go func() {
-			<-time.After(5 * time.Second)
-			s.ChannelMessageDelete(msg.ChannelID, msg.ID)
-		}()
+		go selfDestruct(s, msg, time.After(5 * time.Second))
 		return
 	}
 
@@ -120,22 +117,10 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 	if err != nil {
 		fmt.Printf("Error on sending game code message to channel %s: %s\n", m.ChannelID, err)
 	} else {
-		// FIXME much repeated code
-		go func() {
-			gc := args[0]
-			commandTimers[gc] = time.After(2 * time.Minute)
-			<-commandTimers[gc]
-			s.ChannelMessageDelete(msg.ChannelID, msg.ID)
-			delete(commandTimers, gc)
-		}()
+		go selfDestruct(s, msg, regTimer(2 * time.Minute, &commandTimers, args[0]))
 	}
 
-	go func() {
-		uid := m.Author.ID
-		rateLimiters[uid] = time.After(10 * time.Second)
-		<-rateLimiters[uid]
-		delete(rateLimiters, uid)
-	}()
+	regTimer(10 * time.Second, &rateLimiters, m.Author.ID)
 }
 
 /*** About ***/

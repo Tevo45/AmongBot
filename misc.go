@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"time"
 	"image/draw"
 	"image/png"
 	"regexp"
@@ -132,6 +133,29 @@ func encodeImg(i image.Image) (string, error) {
 // Returns central point for rectangle r
 func center(rect image.Rectangle) image.Point {
 	return image.Point{(rect.Max.X - rect.Min.X) / 2, (rect.Max.Y - rect.Min.Y) / 2}
+}
+
+// Creates a timer of duration t and registers it on *dict with key k, keeping it there until it ticks once
+func regTimer(t time.Duration, dict *map[string]<-chan time.Time, k string) <-chan time.Time {
+	clock := time.After(t)
+	if dict != nil {
+		(*dict)[k] = clock
+	}
+	c := make(chan time.Time, 1)
+	go func() {
+		tmp := <-clock
+		if dict != nil {
+			delete(*dict, k)
+		}
+		c <- tmp
+	}()
+	return c
+}
+
+// Destroys a message after t ticks once
+func selfDestruct(s *discordgo.Session, m *discordgo.Message, t <-chan time.Time) {
+	<-t
+	s.ChannelMessageDelete(m.ChannelID, m.ID)
 }
 
 /* Shamelessly copy-pasted from https://blog.golang.org/image-draw */
