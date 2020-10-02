@@ -218,12 +218,20 @@ func matchHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 	players := len(callUsers) // FIXME Is there a better way to get number of people on voice chan?
 
 	s.ChannelMessageSendEmbed(m.ChannelID, &discordgo.MessageEmbed{
-		Title: "<a:redbit:759943137581203527> **Matchmaking**\n",
-		Description: fmt.Sprintf(
-			"%s está a procurar pessoas para jogar!\n"+
-				"<:INTERFONEAMONG:758198140779233321> **Canal:** <#%s>"+
-				"<:preto:760991599899312169>**Players:** %d\n"+
-				"<:aponta:761444193906065418> [Juntar-se](https://discord.gg/%s)",
-			m.Author.Mention(), vs.ChannelID, players, inv.Code),
+		Title:       "<a:redbit:759943137581203527> **Matchmaking**\n",
+		Description: fmt.Sprintf("%s está procurando mais gente para jogar!", m.Author.Mention()),
+		Color:       0xC02000,
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: "https://pdhl.s-ul.eu/FX37PeEg"},
+		Fields: []*discordgo.MessageEmbedField{
+			&discordgo.MessageEmbedField{
+				Name: fmt.Sprintf(
+					"<a:runtime:758883655471857674> **Informações:**"),
+				Inline: true,
+				Value: fmt.Sprintf(
+					"**・Canal:** <#%s> "+"| **Players:** %d/10\n"+"<:aponta:761444193906065418> [Juntar-se ao grupo!](https://discord.gg/%s)",
+					vs.ChannelID, players, inv.Code),
+			},
+		},
 	})
 }
