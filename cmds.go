@@ -57,7 +57,10 @@ func inviteHandler(args []string, s *discordgo.Session, m *discordgo.MessageCrea
 
 /*** Game code ***/
 
-var rateLimiters = map[string]<-chan time.Time{}
+var (
+	rateLimiters = map[string]<-chan time.Time{}	// UID -> Timer
+	commandTimers = map[string]<-chan time.Time{} // Match code -> Timer
+)
 
 func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	if len(args) != 1 {
@@ -72,16 +75,27 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 		return
 	}
 
-	vs := getVoiceState(s, m.Author.ID, m.GuildID)
-	if vs == nil {
-		s.ChannelMessageSend(m.ChannelID,
-			"<a:load:758855839497977857> *Você não esta em nenhum canal de voz.*")
+	if commandTimers[args[0]] != nil {
+		msg, _ := s.ChannelMessageSend(m.ChannelID,
+			fmt.Sprintf("%s Já tem uma mensagem po", m.Author.Mention()))
+		s.ChannelMessageDelete(m.ChannelID, m.ID)
+		go func() {
+			<-time.After(5 * time.Second)
+			s.ChannelMessageDelete(msg.ChannelID, msg.ID)
+		}()
 		return
 	}
 
 	if rateLimiters[m.Author.ID] != nil {
 		s.ChannelMessageSend(m.ChannelID,
 			"<a:load:758855839497977857> *Você está a enviar pedidos rápido demais, tente novamente mais tarde.*")
+		return
+	}
+
+	vs := getVoiceState(s, m.Author.ID, m.GuildID)
+	if vs == nil {
+		s.ChannelMessageSend(m.ChannelID,
+			"<a:load:758855839497977857> *Você não esta em nenhum canal de voz.*")
 		return
 	}
 
@@ -93,13 +107,28 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 
 	callUsers := getCallMembers(s, vs.ChannelID, vs.GuildID)
 
-	s.ChannelMessageSendComplex(m.ChannelID,
+	msg, err := s.ChannelMessageSendComplex(m.ChannelID,
 		&discordgo.MessageSend{
 			Content: fmt.Sprintf("||%s||", mentions(callUsers)),
 			Embed: &discordgo.MessageEmbed{
 				Title:       fmt.Sprintf("<a:redbit:759943137581203527> Convite - %s", chann.Name),
 				Color:       0xC02000,
-				Description: fmt.Sprintf("**・Código:** %s", args[0])}})
+				Description: fmt.Sprintf("**・Código:** %s", args[0]),
+			},
+		})
+
+	if err != nil {
+		fmt.Printf("Error on sending game code message to channel %s: %s\n", m.ChannelID, err)
+	} else {
+		// FIXME much repeated code
+		go func() {
+			gc := args[0]
+			commandTimers[gc] = time.After(2 * time.Minute)
+			<-commandTimers[gc]
+			s.ChannelMessageDelete(msg.ChannelID, msg.ID)
+			delete(commandTimers, gc)
+		}()
+	}
 
 	go func() {
 		uid := m.Author.ID
