@@ -77,7 +77,7 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 
 	if commandTimers[args[0]] != nil {
 		msg, _ := s.ChannelMessageSend(m.ChannelID,
-			fmt.Sprintf("%s Já tem uma mensagem po", m.Author.Mention()))
+			fmt.Sprintf("<a:load:758855839497977857> %s, um convite já foi criado, espere o mesmo expirar para executar o comando novamente.", m.Author.Mention()))
 		s.ChannelMessageDelete(m.ChannelID, m.ID)
 		go selfDestruct(s, msg, time.After(5 * time.Second))
 		return
@@ -110,7 +110,7 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 			Embed: &discordgo.MessageEmbed{
 				Title:       fmt.Sprintf("<a:redbit:759943137581203527> Convite - %s", chann.Name),
 				Color:       0xC02000,
-				Description: fmt.Sprintf("**・Código:** %s", args[0]),
+				Description: fmt.Sprintf("**・Código:** %s"+"\n<:plusamong:761656218153779232>*O convite expirará em 120 segundos.*", args[0]),
 			},
 		})
 
