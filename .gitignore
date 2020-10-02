@@ -1,0 +1,5 @@
+config.toml
+go.sum
+mkfile
+*.exe
+amongbot
