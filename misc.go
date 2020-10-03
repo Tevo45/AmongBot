@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"time"
 	"image/draw"
 	"image/png"
 	"regexp"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -189,10 +189,26 @@ type menuEntry interface {
 	Content() string
 }
 
+type styleFilter interface {
+	Filter(em *discordgo.MessageEmbed, curPg int, itemsPerPg int)
+}
+
+type styleFun struct {
+	fn func(em *discordgo.MessageEmbed, curPg int, itemsPerPg int)
+}
+
+func (s *styleFun) Filter(em *discordgo.MessageEmbed, curPg int, itemsPerPg int) {
+	s.fn(em, curPg, itemsPerPg)
+}
+
+func styleFunc(fn func(em *discordgo.MessageEmbed, curPg int, itemsPerPg int)) styleFilter {
+	return &styleFun{fn: fn}
+}
+
 var (
 	rmRegister = map[string]*reactionMenu{}
-	forward = "761818451387351051"	// TODO Assets, move this to an external file
-	backward = "761818430579539978"
+	forward    = "rightamong:761818451387351051" // TODO Assets, move this to an external file
+	backward   = "leftamong:761818430579539978"
 )
 
 func rmReactionHandler(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
@@ -203,7 +219,7 @@ func rmReactionHandler(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 	if menu == nil {
 		return
 	}
-	switch(r.Emoji.ID) {
+	switch r.Emoji.APIName() {
 	case forward:
 		menu.Forward(s)
 	case backward:
@@ -211,8 +227,8 @@ func rmReactionHandler(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 	}
 }
 
-func reactionSlider(s *discordgo.Session, ch string, fields []menuEntry) (err error, rm *reactionMenu) {
-	rm = &reactionMenu{fields: fields, itemsPerPg: 10}
+func reactionSlider(s *discordgo.Session, ch string, fields []menuEntry, filter styleFilter) (err error, rm *reactionMenu) {
+	rm = &reactionMenu{fields: fields, itemsPerPg: 10, filter: filter}
 	rm.msg, err = s.ChannelMessageSendEmbed(ch, rm.Render())
 	if err != nil {
 		rm = nil
@@ -224,10 +240,11 @@ func reactionSlider(s *discordgo.Session, ch string, fields []menuEntry) (err er
 }
 
 type reactionMenu struct {
-	fields []menuEntry
-	msg	*discordgo.Message
-	curPg int
+	fields     []menuEntry
+	msg        *discordgo.Message
+	curPg      int
 	itemsPerPg int
+	filter     styleFilter
 }
 
 func (m *reactionMenu) Forward(s *discordgo.Session) {
@@ -247,22 +264,25 @@ func (m *reactionMenu) Backward(s *discordgo.Session) {
 }
 
 func (m *reactionMenu) Render() *discordgo.MessageEmbed {
-	if m.curPg * m.itemsPerPg > len(m.fields) {
+	if m.curPg*m.itemsPerPg > len(m.fields) {
 		return &discordgo.MessageEmbed{Title: "Illegal page"}
 	}
-	fls := m.fields[m.curPg * m.itemsPerPg:]
+	fls := m.fields[m.curPg*m.itemsPerPg:]
 	if len(fls) > m.itemsPerPg {
 		fls = fls[:m.itemsPerPg]
 	}
 	pgBody := ""
 	for _, fl := range fls {
-		pgBody += fl.Content()
-		pgBody += "\n"
+		pgBody += fl.Content() + "\n"
 	}
-	return &discordgo.MessageEmbed{
-		Title: fmt.Sprintf("Página %d", m.curPg + 1),
+	em := &discordgo.MessageEmbed{
+		Title:       fmt.Sprintf("Página %d", m.curPg+1),
 		Description: pgBody,
 	}
+	if m.filter != nil {
+		m.filter.Filter(em, m.curPg, m.itemsPerPg)
+	}
+	return em
 }
 
 func (m *reactionMenu) Update(s *discordgo.Session) {
@@ -277,18 +297,17 @@ func (m *reactionMenu) UpdateEmbed(s *discordgo.Session) {
 func (m *reactionMenu) UpdateReactions(s *discordgo.Session) {
 	s.MessageReactionsRemoveAll(m.msg.ChannelID, m.msg.ID)
 	if m.curPg > 0 {
-		s.MessageReactionAdd(m.msg.ChannelID, m.msg.ID, "leftamong:" + backward)
+		s.MessageReactionAdd(m.msg.ChannelID, m.msg.ID, backward)
 	}
-	// FIXME Don't just append a hardcoded name to the thing
 	if m.curPg < m.maxPg() {
-		s.MessageReactionAdd(m.msg.ChannelID, m.msg.ID, "rightamong:" + forward)
- 	}
+		s.MessageReactionAdd(m.msg.ChannelID, m.msg.ID, forward)
+	}
 }
 
 func (m *reactionMenu) maxPg() (r int) {
 	l := len(m.fields) - 1
 	i := m.itemsPerPg
-	r = l/i
+	r = l / i
 	return
 }
 

@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -59,7 +59,7 @@ func inviteHandler(args []string, s *discordgo.Session, m *discordgo.MessageCrea
 /*** Game code ***/
 
 var (
-	rateLimiters = map[string]<-chan time.Time{}	// UID -> Timer
+	rateLimiters  = map[string]<-chan time.Time{} // UID -> Timer
 	commandTimers = map[string]<-chan time.Time{} // Match code -> Timer
 )
 
@@ -80,7 +80,7 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 		msg, _ := s.ChannelMessageSend(m.ChannelID,
 			fmt.Sprintf("<a:load:758855839497977857> %s, um convite já foi criado, espere o mesmo expirar para executar o comando novamente.", m.Author.Mention()))
 		s.ChannelMessageDelete(m.ChannelID, m.ID)
-		go selfDestruct(s, msg, time.After(5 * time.Second))
+		go selfDestruct(s, msg, time.After(5*time.Second))
 		return
 	}
 
@@ -118,10 +118,10 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 	if err != nil {
 		fmt.Printf("Error on sending game code message to channel %s: %s\n", m.ChannelID, err)
 	} else {
-		go selfDestruct(s, msg, regTimer(2 * time.Minute, &commandTimers, args[0]))
+		go selfDestruct(s, msg, regTimer(2*time.Minute, &commandTimers, args[0]))
 	}
 
-	regTimer(10 * time.Second, &rateLimiters, m.Author.ID)
+	regTimer(10*time.Second, &rateLimiters, m.Author.ID)
 }
 
 /*** About ***/
@@ -256,14 +256,17 @@ func matchHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 func testMenuHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	stubMenu := []menuEntry{}
 	v := 24
-	if(len(args) != 0) {
+	if len(args) != 0 {
 		v, _ = strconv.Atoi(args[0])
 	}
 	for c := 0; c < v; c++ {
 		stubMenu = append(stubMenu, stubItem{})
 	}
-	reactionSlider(s, m.ChannelID, stubMenu)
-//	if err != nil {
-//		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("error: %s", err))
-//	}
+	reactionSlider(s, m.ChannelID, stubMenu, styleFunc(
+		func(s *discordgo.MessageEmbed, p, np int) {
+			s.Color = 0xFF0000
+		}))
+	//	if err != nil {
+	//		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("error: %s", err))
+	//	}
 }
