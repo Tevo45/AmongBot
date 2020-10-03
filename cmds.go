@@ -216,11 +216,11 @@ func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 	for k, cmd := range commands.cmds {
 		cmds += fmt.Sprintf("**・ %s:** *%s*", strings.Title(k), cmd.help)
 		if aliases := commands.Aliases(k); len(aliases) > 0 {
-			cmds += "\n\t**Aliases:** "
+			cmds += "\n\t**Aliases:** *"
 			for _, alias := range aliases {
-				cmds += conf.Prefix + alias + ", "
+				cmds += conf.Prefix + alias + "*, *"
 			}
-			cmds = cmds[:len(cmds)-2]
+			cmds = cmds[:len(cmds) - 3]
 		}
 		cmds += "\n"
 	}

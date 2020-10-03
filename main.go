@@ -41,7 +41,7 @@ func main() {
 
 	commands.Add("ping", "veja se estou vivo!", pingHandler)
 
-	commands.Add("play", "like, matchmaking bro‽", matchHandler)
+	commands.Add("play", "cria um convite de matchmaking.", matchHandler)
 
 	err = dg.Open()
 	if err != nil {
