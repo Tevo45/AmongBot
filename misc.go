@@ -14,6 +14,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+// FIXME Stop codebase from degenerating into chaos
+
 func containsUsr(l []*discordgo.User, k *discordgo.User) bool {
 	for _, i := range l {
 		if i.ID == k.ID {
@@ -179,4 +181,119 @@ func (c *circle) At(x, y int) color.Color {
 		return color.Alpha{255}
 	}
 	return color.Alpha{0}
+}
+
+// FIXME Error check everything below this
+
+type menuEntry interface {
+	Content() string
+}
+
+var (
+	rmRegister = map[string]*reactionMenu{}
+	forward = "761818451387351051"	// TODO Assets, move this to an external file
+	backward = "761818430579539978"
+)
+
+func rmReactionHandler(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+	if r.UserID == s.State.User.ID {
+		return
+	}
+	menu := rmRegister[r.MessageID]
+	if menu == nil {
+		return
+	}
+	switch(r.Emoji.ID) {
+	case forward:
+		menu.Forward(s)
+	case backward:
+		menu.Backward(s)
+	}
+}
+
+func reactionSlider(s *discordgo.Session, ch string, fields []menuEntry) (err error, rm *reactionMenu) {
+	rm = &reactionMenu{fields: fields, itemsPerPg: 10}
+	rm.msg, err = s.ChannelMessageSendEmbed(ch, rm.Render())
+	if err != nil {
+		rm = nil
+		return
+	}
+	rm.UpdateReactions(s)
+	rmRegister[rm.msg.ID] = rm
+	return
+}
+
+type reactionMenu struct {
+	fields []menuEntry
+	msg	*discordgo.Message
+	curPg int
+	itemsPerPg int
+}
+
+func (m *reactionMenu) Forward(s *discordgo.Session) {
+	if m.curPg >= m.maxPg() {
+		return
+	}
+	m.curPg++
+	m.Update(s)
+}
+
+func (m *reactionMenu) Backward(s *discordgo.Session) {
+	if m.curPg <= 0 {
+		return
+	}
+	m.curPg--
+	m.Update(s)
+}
+
+func (m *reactionMenu) Render() *discordgo.MessageEmbed {
+	if m.curPg * m.itemsPerPg > len(m.fields) {
+		return &discordgo.MessageEmbed{Title: "Illegal page"}
+	}
+	fls := m.fields[m.curPg * m.itemsPerPg:]
+	if len(fls) > m.itemsPerPg {
+		fls = fls[:m.itemsPerPg]
+	}
+	pgBody := ""
+	for _, fl := range fls {
+		pgBody += fl.Content()
+		pgBody += "\n"
+	}
+	return &discordgo.MessageEmbed{
+		Title: fmt.Sprintf("Página %d", m.curPg + 1),
+		Description: pgBody,
+	}
+}
+
+func (m *reactionMenu) Update(s *discordgo.Session) {
+	m.UpdateEmbed(s)
+	m.UpdateReactions(s)
+}
+
+func (m *reactionMenu) UpdateEmbed(s *discordgo.Session) {
+	s.ChannelMessageEditEmbed(m.msg.ChannelID, m.msg.ID, m.Render())
+}
+
+func (m *reactionMenu) UpdateReactions(s *discordgo.Session) {
+	s.MessageReactionsRemoveAll(m.msg.ChannelID, m.msg.ID)
+	if m.curPg > 0 {
+		s.MessageReactionAdd(m.msg.ChannelID, m.msg.ID, "leftamong:" + backward)
+	}
+	// FIXME Don't just append a hardcoded name to the thing
+	if m.curPg < m.maxPg() {
+		s.MessageReactionAdd(m.msg.ChannelID, m.msg.ID, "rightamong:" + forward)
+ 	}
+}
+
+func (m *reactionMenu) maxPg() (r int) {
+	l := len(m.fields) - 1
+	i := m.itemsPerPg
+	r = l/i
+	return
+}
+
+type stubItem struct{}
+
+func (stubItem) Content() string {
+	return "stub"
 }

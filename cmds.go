@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"strconv"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -248,4 +249,21 @@ func matchHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 			},
 		},
 	})
+}
+
+/*** ***/
+
+func testMenuHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	stubMenu := []menuEntry{}
+	v := 24
+	if(len(args) != 0) {
+		v, _ = strconv.Atoi(args[0])
+	}
+	for c := 0; c < v; c++ {
+		stubMenu = append(stubMenu, stubItem{})
+	}
+	reactionSlider(s, m.ChannelID, stubMenu)
+//	if err != nil {
+//		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("error: %s", err))
+//	}
 }

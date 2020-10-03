@@ -29,6 +29,7 @@ func main() {
 	}
 
 	dg.AddHandler(messageCreate)
+	dg.AddHandler(rmReactionHandler)
 
 	// Nice repetition, bro
 	commands.add("help", "abre a lista de comandos.", helpHandler)
@@ -38,6 +39,7 @@ func main() {
 	commands.add("servers", "lista todos os servidores em que fui adicionado.", srvHandler)
 	commands.add("ping", "veja se estou vivo!", pingHandler)
 	commands.add("play", "like, matchmaking bro‽", matchHandler)
+	commands.add("tm", "☭", testMenuHandler)
 
 	err = dg.Open()
 	if err != nil {
