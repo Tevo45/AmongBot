@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"time"
 	"image/draw"
 	"image/png"
 	"regexp"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -11,23 +12,80 @@ import (
 
 /**/
 
+var commands = cmdMap{cmds: map[string]*command{}, aliases: map[string]*command{}}
+
 type cmdFunc func([]string, *discordgo.Session, *discordgo.MessageCreate)
 type command struct {
 	cmd  cmdFunc
 	help string
 }
 
-type cmdMap map[string]*command
-
-func (c *cmdMap) add(cmd, help string, fn cmdFunc) {
-	// Nice syntax, bro
-	(*c)[cmd] = &command{
-		cmd:  fn,
-		help: help}
+type cmdMap struct {
+	cmds, aliases map[string]*command
 }
 
-func (c *cmdMap) alias(cmd, dest string) {
-	(*c)[cmd] = (*c)[dest]
+func (c *cmdMap) Add(cmd, help string, fn cmdFunc) {
+	c.cmds[cmd] = &command{
+		cmd:  fn,
+		help: help,
+	}
+}
+
+func (c *cmdMap) Alias(cmd, dest string) {
+	c.aliases[cmd] = c.cmds[dest]
+}
+
+func (c *cmdMap) Aliases(cmd string) (als []string) {
+	als = []string{}
+	com := c.Get(cmd)
+	if com == nil {
+		return
+	}
+	for k, i := range c.aliases {
+		if i == com {
+			als = append(als, k)
+		}
+	}
+	return
+}
+
+func (c *cmdMap) Get(cmd string) *command {
+	if com := c.cmds[cmd]; com != nil {
+		return com
+	}
+	return c.aliases[cmd]
+}
+
+func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Author.ID == s.State.User.ID {
+		return
+	}
+
+	if strings.HasPrefix(m.Content, conf.Prefix) {
+		// Maybe this should be in a function (handleCommand?)
+		cmdArgs := strings.Split(m.Content, " ")
+		cmdStr := cmdArgs[0]
+		cmdStr = strings.Replace(cmdStr, conf.Prefix, "", 1)
+		cmd := commands.Get(cmdStr)
+		if cmd != nil {
+			cmd.cmd(cmdArgs[1:], s, m)
+		}
+		return
+	}
+
+	if containsUsr(m.Mentions, s.State.User) {
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
+			"<a:load:758855839497977857> *Opa, precisa de ajuda? meu prefixo é **'%s'**, caso precise de ajuda utilize **'%shelp'***", conf.Prefix, conf.Prefix))
+		return
+	}
+
+	// Maybe we should see if user is in a call, but doing so for every message would be
+	// rather expensive
+	if t, _ := regexp.Match("^[A-Z]{6}($| )", []byte(m.Content)); t {
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
+			"<a:load:758855839497977857> <@%s> *Você sabia que temos um sistema de convite?* `%sc <código da sala>`", m.Author.ID, conf.Prefix))
+		return
+	}
 }
 
 /*** Stub ***/
@@ -58,7 +116,7 @@ func inviteHandler(args []string, s *discordgo.Session, m *discordgo.MessageCrea
 /*** Game code ***/
 
 var (
-	rateLimiters = map[string]<-chan time.Time{}	// UID -> Timer
+	rateLimiters  = map[string]<-chan time.Time{} // UID -> Timer
 	commandTimers = map[string]<-chan time.Time{} // Match code -> Timer
 )
 
@@ -79,7 +137,7 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 		msg, _ := s.ChannelMessageSend(m.ChannelID,
 			fmt.Sprintf("<a:load:758855839497977857> %s, um convite já foi criado, espere o mesmo expirar para executar o comando novamente.", m.Author.Mention()))
 		s.ChannelMessageDelete(m.ChannelID, m.ID)
-		go selfDestruct(s, msg, time.After(5 * time.Second))
+		go selfDestruct(s, msg, time.After(5*time.Second))
 		return
 	}
 
@@ -117,10 +175,10 @@ func codeHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 	if err != nil {
 		fmt.Printf("Error on sending game code message to channel %s: %s\n", m.ChannelID, err)
 	} else {
-		go selfDestruct(s, msg, regTimer(2 * time.Minute, &commandTimers, args[0]))
+		go selfDestruct(s, msg, regTimer(2*time.Minute, &commandTimers, args[0]))
 	}
 
-	regTimer(10 * time.Second, &rateLimiters, m.Author.ID)
+	regTimer(10*time.Second, &rateLimiters, m.Author.ID)
 }
 
 /*** About ***/
@@ -155,8 +213,16 @@ func aboutHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 
 func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	cmds := ""
-	for k, cmd := range commands {
-		cmds += fmt.Sprintf("**・ %s:** *%s*\n", strings.Title(k), cmd.help)
+	for k, cmd := range commands.cmds {
+		cmds += fmt.Sprintf("**・ %s:** *%s*", strings.Title(k), cmd.help)
+		if aliases := commands.Aliases(k); len(aliases) > 0 {
+			cmds += "\n\t**Aliases:** "
+			for _, alias := range aliases {
+				cmds += conf.Prefix + alias + ", "
+			}
+			cmds = cmds[:len(cmds)-2]
+		}
+		cmds += "\n"
 	}
 	s.ChannelMessageSendEmbed(m.ChannelID,
 		&discordgo.MessageEmbed{

@@ -9,6 +9,8 @@ import (
 	"github.com/pelletier/go-toml"
 )
 
+var conf = config{}
+
 type config struct {
 	Token      string
 	Prefix     string

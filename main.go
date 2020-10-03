@@ -4,16 +4,10 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"regexp"
 	"strings"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
-)
-
-var (
-	conf     = config{}
-	commands = cmdMap{}
 )
 
 func main() {
@@ -31,13 +25,23 @@ func main() {
 	dg.AddHandler(messageCreate)
 
 	// Nice repetition, bro
-	commands.add("help", "abre a lista de comandos.", helpHandler)
-	commands.add("sobre", "mostra autores, e como sistema está rodando.", aboutHandler)
-	commands.add("invite", "entre no servidor de suporte.", inviteHandler)
-	commands.add("c", "convida pessoas no mesmo canal de voz para uma partida.", codeHandler)
-	commands.add("servers", "lista todos os servidores em que fui adicionado.", srvHandler)
-	commands.add("ping", "veja se estou vivo!", pingHandler)
-	commands.add("play", "like, matchmaking bro‽", matchHandler)
+	commands.Add("ajuda", "abre a lista de comandos.", helpHandler)
+	commands.Alias("help", "ajuda")
+
+	commands.Add("sobre", "mostra autores, e como sistema está rodando.", aboutHandler)
+	commands.Alias("about", "sobre")
+
+	commands.Add("suporte", "entre no servidor de suporte.", inviteHandler)
+	commands.Alias("invite", "suporte")
+	commands.Alias("support", "suporte")
+
+	commands.Add("c", "convida pessoas no mesmo canal de voz para uma partida.", codeHandler)
+
+	commands.Add("servers", "lista todos os servidores em que fui adicionado.", srvHandler)
+
+	commands.Add("ping", "veja se estou vivo!", pingHandler)
+
+	commands.Add("play", "like, matchmaking bro‽", matchHandler)
 
 	err = dg.Open()
 	if err != nil {
@@ -53,36 +57,4 @@ func main() {
 	<-sc
 
 	dg.Close()
-}
-
-func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.ID == s.State.User.ID {
-		return
-	}
-
-	if strings.HasPrefix(m.Content, conf.Prefix) {
-		// Maybe this should be in a function (handleCommand?)
-		cmdArgs := strings.Split(m.Content, " ")
-		cmdStr := cmdArgs[0]
-		cmdStr = strings.Replace(cmdStr, conf.Prefix, "", 1)
-		cmd := commands[cmdStr]
-		if cmd != nil {
-			cmd.cmd(cmdArgs[1:], s, m)
-		}
-		return
-	}
-
-	if containsUsr(m.Mentions, s.State.User) {
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
-			"<a:load:758855839497977857> *Opa, precisa de ajuda? meu prefixo é **'%s'**, caso precise de ajuda utilize **'%shelp'***", conf.Prefix, conf.Prefix))
-		return
-	}
-
-	// Maybe we should see if user is in a call, but doing so for every message would be
-	// rather expensive
-	if t, _ := regexp.Match("^[A-Z]{6}($| )", []byte(m.Content)); t {
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(
-			"<a:load:758855839497977857> <@%s> *Você sabia que temos um sistema de convite?* `%sc <código da sala>`", m.Author.ID, conf.Prefix))
-		return
-	}
 }
