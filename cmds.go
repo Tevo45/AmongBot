@@ -166,7 +166,7 @@ func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 			Description: cmds,
 			Color:       0xC02000,
 			Thumbnail: &discordgo.MessageEmbedThumbnail{
-				URL: "https://pdhl.s-ul.eu/FX37PeEg",
+				URL: "https://pdhl.s-ul.eu/FX37PeEg", // TODO Host this on commander
 			},
 		})
 }
@@ -206,6 +206,10 @@ func srvHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate)
 			fmt.Printf("failed to remove listing emoji for guild %s: %s\n", srv, err)
 		}
 	}
+}
+
+func newSrvHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	reactionSlider(s, m.ChannelID, guildProvider(s), nil)
 }
 
 /*** Play ***/
@@ -262,7 +266,7 @@ func testMenuHandler(args []string, s *discordgo.Session, m *discordgo.MessageCr
 	for c := 0; c < v; c++ {
 		stubMenu = append(stubMenu, stubItem{})
 	}
-	reactionSlider(s, m.ChannelID, stubMenu, styleFunc(
+	reactionSlider(s, m.ChannelID, sliceMenu(stubMenu), styleFunc(
 		func(s *discordgo.MessageEmbed, p, np int) {
 			s.Color = 0xFF0000
 		}))

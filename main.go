@@ -40,6 +40,7 @@ func main() {
 	commands.add("ping", "veja se estou vivo!", pingHandler)
 	commands.add("play", "like, matchmaking bro‽", matchHandler)
 	commands.add("tm", "☭", testMenuHandler)
+	commands.add("srv", "yes", newSrvHandler)
 
 	err = dg.Open()
 	if err != nil {
