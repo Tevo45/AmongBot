@@ -9,10 +9,13 @@ import (
 	"image/draw"
 	"image/png"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+// FIXME Stop codebase from degenerating into chaos
 
 func containsUsr(l []*discordgo.User, k *discordgo.User) bool {
 	for _, i := range l {
@@ -23,10 +26,15 @@ func containsUsr(l []*discordgo.User, k *discordgo.User) bool {
 	return false
 }
 
+var emojiCache = map[string]*discordgo.Emoji{}
+
 // Registers emoji with g's icon under conf.EmoteGuild, returns registered emoji or nil
 func registerGuildEmoji(s *discordgo.Session, g *discordgo.Guild) *discordgo.Emoji {
 	// TODO Handle gifs
 	// FIXME Don't overload return value as error
+	if cached := emojiCache[g.ID]; cached != nil {
+		return cached
+	}
 	img, err := s.GuildIcon(g.ID)
 	if err != nil {
 		fmt.Printf("server %s likely has no icon, ignoring (err: %s)\n", g.ID, err)
@@ -41,11 +49,14 @@ func registerGuildEmoji(s *discordgo.Session, g *discordgo.Guild) *discordgo.Emo
 		fmt.Printf("failed to encode icon for %s: %s\n", g.ID, err)
 		return nil
 	}
+
 	e, err := s.GuildEmojiCreate(conf.EmoteGuild, g.ID, iUrl, nil)
+
 	if err != nil {
 		fmt.Printf("failed to add emoji for guild %s: %s\n", g.ID, err)
 		return nil
 	}
+	emojiCache[g.ID] = e
 	return e
 }
 
@@ -179,4 +190,283 @@ func (c *circle) At(x, y int) color.Color {
 		return color.Alpha{255}
 	}
 	return color.Alpha{0}
+}
+
+// This could be in a library
+// FIXME Error check everything below this
+
+type menuEntry interface {
+	Content() string
+}
+
+type menuProvider interface {
+	Get(idx, count int) []menuEntry
+	Len() int
+}
+
+type menuSlice struct {
+	slice []menuEntry
+}
+
+func sliceMenu(s []menuEntry) menuProvider {
+	return &menuSlice{slice: s}
+}
+
+func (m *menuSlice) Get(idx, c int) []menuEntry {
+	if idx > len(m.slice) {
+		return []menuEntry{}
+	}
+	r := m.slice[idx:]
+	if c < len(r) {
+		r = r[:c]
+	}
+	return r
+}
+
+func (m *menuSlice) Len() int {
+	return len(m.slice)
+}
+
+type styleFilter interface {
+	Filter(em *discordgo.MessageEmbed, curPg int, itemsPerPg int)
+}
+
+type styleFun struct {
+	fn func(em *discordgo.MessageEmbed, curPg int, itemsPerPg int)
+}
+
+func (s *styleFun) Filter(em *discordgo.MessageEmbed, curPg int, itemsPerPg int) {
+	s.fn(em, curPg, itemsPerPg)
+}
+
+func styleFunc(fn func(em *discordgo.MessageEmbed, curPg int, itemsPerPg int)) styleFilter {
+	return &styleFun{fn: fn}
+}
+
+var (
+	rmRegister = map[string]*reactionMenu{}
+	forward    = "rightamong:761818451387351051" // TODO Assets, move this to an external file
+	backward   = "leftamong:761818430579539978"
+)
+
+func rmReactionHandler(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+	if r.UserID == s.State.User.ID {
+		return
+	}
+	menu := rmRegister[r.MessageID]
+	if menu == nil {
+		return
+	}
+	switch r.Emoji.APIName() {
+	case forward:
+		menu.Forward(s)
+	case backward:
+		menu.Backward(s)
+	}
+}
+
+func reactionSlider(s *discordgo.Session, ch string, fields menuProvider, filter styleFilter) (err error, rm *reactionMenu) {
+	rm = &reactionMenu{fields: fields, itemsPerPg: 10, filter: filter}
+	rm.msg, err = s.ChannelMessageSendEmbed(ch, rm.Render())
+	if err != nil {
+		rm = nil
+		return
+	}
+	rm.UpdateReactions(s)
+	rmRegister[rm.msg.ID] = rm
+	return
+}
+
+type reactionMenu struct {
+	fields     menuProvider
+	msg        *discordgo.Message
+	curPg      int
+	itemsPerPg int
+	filter     styleFilter
+}
+
+func (m *reactionMenu) Forward(s *discordgo.Session) {
+	if m.curPg >= m.maxPg() {
+		return
+	}
+	m.curPg++
+	m.Update(s)
+}
+
+func (m *reactionMenu) Backward(s *discordgo.Session) {
+	if m.curPg <= 0 {
+		return
+	}
+	m.curPg--
+	m.Update(s)
+}
+
+func (m *reactionMenu) Render() *discordgo.MessageEmbed {
+	fls := m.fields.Get(m.curPg*m.itemsPerPg, m.itemsPerPg)
+	if len(fls) == 0 {
+		return &discordgo.MessageEmbed{Title: "Illegal page"}
+	}
+	pgBody := ""
+	wrks := make([]chan string, 0)
+	for _, fl := range fls {
+		chann := make(chan string, 1)
+		wrks = append(wrks, chann)
+		go func(c chan string, f menuEntry) {
+			c <- f.Content() + "\n"
+		}(chann, fl)
+	}
+	for _, c := range wrks {
+		pgBody += <-c
+	}
+	em := &discordgo.MessageEmbed{
+		Title:       fmt.Sprintf("Página %d", m.curPg+1),
+		Description: pgBody,
+	}
+	if m.filter != nil {
+		m.filter.Filter(em, m.curPg, m.itemsPerPg)
+	}
+	return em
+}
+
+func (m *reactionMenu) Update(s *discordgo.Session) {
+	m.UpdateEmbed(s)
+	m.UpdateReactions(s)
+}
+
+func (m *reactionMenu) UpdateEmbed(s *discordgo.Session) {
+	s.ChannelMessageEditEmbed(m.msg.ChannelID, m.msg.ID, m.Render())
+}
+
+func (m *reactionMenu) UpdateReactions(s *discordgo.Session) {
+	s.MessageReactionsRemoveAll(m.msg.ChannelID, m.msg.ID)
+	if m.curPg > 0 {
+		s.MessageReactionAdd(m.msg.ChannelID, m.msg.ID, backward)
+	}
+	if m.curPg < m.maxPg() {
+		s.MessageReactionAdd(m.msg.ChannelID, m.msg.ID, forward)
+	}
+}
+
+func (m *reactionMenu) maxPg() (r int) {
+	l := m.fields.Len() - 1
+	i := m.itemsPerPg
+	r = l / i
+	return
+}
+
+type stubItem struct{}
+
+func (stubItem) Content() string {
+	return "stub"
+}
+
+type srvProvider struct {
+	session *discordgo.Session
+}
+
+func guildProvider(s *discordgo.Session) menuProvider {
+	return &srvProvider{session: s}
+}
+
+func (p *srvProvider) Get(idx, c int) (r []menuEntry) {
+	r = []menuEntry{}
+	if idx > p.Len() {
+		return
+	}
+	pr := state.GetPremiumGuilds()
+	fmt.Println(pr)
+	if len(pr) > idx {
+		for i := idx; i < len(pr) && c != 0; i++ {
+			fmt.Println(i)
+			g, err := p.session.Guild(pr[i].ID)
+			fmt.Println(g, err)
+			if err != nil {
+				fmt.Println("Unable to fetch guild:", err)
+				continue
+			}
+			r = append(r, &srvItem{
+				session:    p.session,
+				guild:      g,
+				premium:    true,
+				premiumUrl: pr[i].InviteURL,
+			})
+			c--
+		}
+	}
+	// FIXME Premium guilds show up 2 times in the menu
+	gl := p.session.State.Guilds[idx:]
+	if len(gl) > c {
+		gl = gl[:c]
+	}
+	for _, g := range gl {
+		r = append(r, &srvItem{session: p.session, guild: g})
+	}
+	return
+}
+
+func (p *srvProvider) Len() int {
+	return len(p.session.State.Guilds)
+}
+
+type srvItem struct {
+	session    *discordgo.Session
+	guild      *discordgo.Guild
+	premium    bool
+	premiumUrl string
+}
+
+func (i *srvItem) Content() (s string) {
+	/*
+		e := registerGuildEmoji(i.session, i.guild)
+		if e != nil {
+			go func() {
+				// FIXME Better cleanup system
+				// We don't know when it's safe to actually remove, so we just assume this is enough
+				<-time.After(15 * time.Second)
+				delete(emojiCache, i.guild.ID)
+				err := i.session.GuildEmojiDelete(conf.EmoteGuild, e.ID)
+				if err != nil {
+					fmt.Printf("failed to remove listing emoji for guild %s: %s\n", i.guild.ID, err)
+				}
+			}()
+			s += e.MessageFormat()
+		} else {
+			s += "<:default:761420942072610817>" // TODO Move this to a resource file
+		}
+	*/
+	s += "<:default:761420942072610817>"
+	if i.premium {
+		s += fmt.Sprintf("• [%s](%s) - <:pr:761394323778437121><:em:761393700177575978><:iu:761393724365209620><:m_:761393746385829938>", i.guild.Name, i.premiumUrl) // TODO Same as above
+	} else {
+		s += fmt.Sprintf("∙ %s", i.guild.Name)
+	}
+	return
+}
+
+func tagToMap(tag string) map[string]*string {
+	m := map[string]*string{}
+	fields := strings.Split(tag, " ")
+	for _, field := range fields {
+		pair := strings.Split(field, ":")
+		if len(pair) == 0 {
+			continue // What the fuck
+		}
+		if len(pair) == 1 {
+			m[pair[0]] = nil
+			continue
+		}
+		m[pair[0]] = &pair[1] // Maybe we should concatenate pair[1:] instead?
+	}
+	return m
+}
+
+// We could make this variadic, but so far I haven't felt the need to
+func coalesce(e1, e2 error) error {
+	if e1 == nil {
+		return e2
+	}
+	if e2 == nil {
+		return e1
+	}
+	return fmt.Errorf("%w; %w", e1, e2)
 }

@@ -16,6 +16,7 @@ func main() {
 		fmt.Println("Unable to read config file:", err)
 		return
 	}
+	fmt.Printf("%v\n", loadState()) // TODO Error checking
 	dg, err := discordgo.New("Bot " + strings.Trim(conf.Token, "\n\t"))
 	if err != nil {
 		fmt.Println("Unable to initialize Discord session:", err)
@@ -23,6 +24,7 @@ func main() {
 	}
 
 	dg.AddHandler(messageCreate)
+	dg.AddHandler(rmReactionHandler)
 
 	// Nice repetition, bro
 	commands.Add("ajuda", "abre a lista de comandos.", helpHandler)
@@ -56,5 +58,6 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
 
+	saveState()
 	dg.Close()
 }

@@ -4,3 +4,4 @@ mkfile
 *.exe
 *~
 amongbot
+/state/

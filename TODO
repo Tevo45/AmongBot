@@ -1,4 +1,6 @@
 - Autoerase invite message after some time
-- Code cleanup (still, kinda)
+- The codebase sucks, make it  so  that it doesn't
+- State system cleanup
 - Proper aliases
 - Paging on srvHandler
+- Clean up a lot of testing code left behind

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -220,7 +221,7 @@ func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 			for _, alias := range aliases {
 				cmds += conf.Prefix + alias + "*, *"
 			}
-			cmds = cmds[:len(cmds) - 3]
+			cmds = cmds[:len(cmds)-3]
 		}
 		cmds += "\n"
 	}
@@ -231,7 +232,7 @@ func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 			Description: cmds,
 			Color:       0xC02000,
 			Thumbnail: &discordgo.MessageEmbedThumbnail{
-				URL: "https://pdhl.s-ul.eu/FX37PeEg",
+				URL: "https://pdhl.s-ul.eu/FX37PeEg", // TODO Host this on commander
 			},
 		})
 }
@@ -239,38 +240,7 @@ func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 /*** Servers ***/
 
 func srvHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
-	names := ""
-	em := map[string]*discordgo.Emoji{}
-	wrks := make([]chan string, 0)
-	// TODO GIFs
-	for _, g := range s.State.Guilds {
-		chann := make(chan string, 1)
-		wrks = append(wrks, chann)
-		go func(c chan string, g *discordgo.Guild) {
-			e := registerGuildEmoji(s, g)
-			ret := ""
-
-			if e != nil {
-				em[g.ID] = e
-				ret += e.MessageFormat()
-			} else {
-				ret += "<:default:761420942072610817>"
-			}
-			ret += fmt.Sprintf("** ∙ %s**\n", g.Name)
-			c <- ret
-		}(chann, g)
-	}
-	for _, c := range wrks {
-		names += <-c
-	}
-	s.ChannelMessageSend(m.ChannelID, names)
-	for srv, emoji := range em {
-		// FIXME Paralelize removal
-		err := s.GuildEmojiDelete(conf.EmoteGuild, emoji.ID)
-		if err != nil {
-			fmt.Printf("failed to remove listing emoji for guild %s: %s\n", srv, err)
-		}
-	}
+	reactionSlider(s, m.ChannelID, guildProvider(s), nil)
 }
 
 /*** Play ***/
@@ -314,4 +284,43 @@ func matchHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 			},
 		},
 	})
+}
+
+func playChanHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+
+}
+
+/*** ***/
+
+func testMenuHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	stubMenu := []menuEntry{}
+	v := 24
+	if len(args) != 0 {
+		v, _ = strconv.Atoi(args[0])
+	}
+	for c := 0; c < v; c++ {
+		stubMenu = append(stubMenu, stubItem{})
+	}
+	reactionSlider(s, m.ChannelID, sliceMenu(stubMenu), styleFunc(
+		func(s *discordgo.MessageEmbed, p, np int) {
+			s.Color = 0xFF0000
+		}))
+	//	if err != nil {
+	//		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("error: %s", err))
+	//	}
+}
+
+func premiumHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	if len(args) == 2 {
+		state.Premium.Servers = append(state.Premium.Servers, premiumMembership{args[0], args[1]})
+		return
+	}
+	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("premium servers: %v", state.GetPremiumGuilds()))
+}
+
+func saveHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	err := saveState()
+	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Error while saving state: %s", err))
+	}
 }
