@@ -22,6 +22,7 @@ func main() {
 		fmt.Println("Unable to read config file:", err)
 		return
 	}
+	loadState()	// TODO Error checking
 	dg, err := discordgo.New("Bot " + strings.Trim(conf.Token, "\n\t"))
 	if err != nil {
 		fmt.Println("Unable to initialize Discord session:", err)
@@ -39,8 +40,10 @@ func main() {
 	commands.add("servers", "lista todos os servidores em que fui adicionado.", srvHandler)
 	commands.add("ping", "veja se estou vivo!", pingHandler)
 	commands.add("play", "like, matchmaking bro‽", matchHandler)
+
 	commands.add("tm", "☭", testMenuHandler)
 	commands.add("srv", "yes", newSrvHandler)
+	commands.add("prm", "♟", premiumHandler)
 
 	err = dg.Open()
 	if err != nil {
