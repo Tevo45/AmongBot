@@ -274,3 +274,10 @@ func testMenuHandler(args []string, s *discordgo.Session, m *discordgo.MessageCr
 	//		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("error: %s", err))
 	//	}
 }
+
+func premiumHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	if len(args) < 0 {
+		// Add stuff
+	}
+	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("premium servers: %v", state.GetPremiumGuilds()))
+}

@@ -9,6 +9,7 @@ import (
 	"image/draw"
 	"image/png"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -410,4 +411,21 @@ func (i *srvItem) Content() (s string) {
 	}
 	s += fmt.Sprintf("∙ %s", i.guild.Name)
 	return
+}
+
+func tagToMap(tag string) map[string]*string {
+	m := map[string]*string{}
+	fields := strings.Split(tag, " ")
+	for _, field := range fields {
+		pair := strings.Split(field, ":")
+		if len(pair) == 0 {
+			continue	// What the fuck
+		}
+		if len(pair) == 1 {
+			m[pair[0]] = nil
+			continue
+		}
+		m[pair[0]] = &pair[1]	// Maybe we should coalesce pair[1:] instead?
+	}
+	return m
 }

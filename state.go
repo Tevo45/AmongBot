@@ -23,7 +23,7 @@ type premiumMemberships struct {
 }
 
 func (s *persistentState) GetPremiumGuilds() []string {
-	return []string{"758117713192288256"}
+	return s.Premium.Servers
 }
 
 var state = persistentState{}
@@ -55,12 +55,11 @@ func loadState() (errs []error) {
 	absStruct := reflect.TypeOf(state)
 	concStruct := reflect.ValueOf(&state).Elem()
 	for c := 0; c < absStruct.NumField(); c++ {
-		err := tryLoadField(concStruct.Field(c))
+		err := tryLoadField(absStruct.Field(c), concStruct.Field(c))
 		if err != nil {
 			errs = append(errs, err)
 		}
 	}
-	saveState()
 	return
 }
 
@@ -114,7 +113,43 @@ func saveField(absField reflect.StructField, concField reflect.Value) (err error
 	return
 }
 
-func tryLoadField(concField reflect.Value) (err error) {
-	err = errors.New("Not implemented")
+func tryLoadField(absField reflect.StructField, concField reflect.Value) (err error) {
+	if !concField.CanSet() {
+		err = errors.New("Field is not settable")
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			r = err
+		}
+	}()
+	opts := tagToMap(string(absField.Tag))
+	format := "json"
+	if f := opts["format"]; f != nil {
+		format = *f
+	}
+	location := absField.Name + "." + format
+	if l := opts["location"]; l != nil {
+		location = *l
+	}
+	buf, err := ioutil.ReadFile("state/" + location)
+	if err != nil {
+		return
+	}
+	switch(format) {
+	case "toml":
+		err = toml.Unmarshal(buf, concField.Addr().Interface())
+		if err != nil {
+			return
+		}
+	case "json":
+		err = toml.Unmarshal(buf, concField.Addr().Interface())
+		if err != nil {
+			return
+		}
+	default:
+		err = errors.New("Unsupported format: " + format)
+		return
+	}
 	return
 }

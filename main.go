@@ -22,7 +22,7 @@ func main() {
 		fmt.Println("Unable to read config file:", err)
 		return
 	}
-	loadState()	// TODO Error checking
+	fmt.Printf("%v\n", loadState())	// TODO Error checking
 	dg, err := discordgo.New("Bot " + strings.Trim(conf.Token, "\n\t"))
 	if err != nil {
 		fmt.Println("Unable to initialize Discord session:", err)
