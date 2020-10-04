@@ -255,6 +255,10 @@ func matchHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 	})
 }
 
+func playChanHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	
+}
+
 /*** ***/
 
 func testMenuHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {

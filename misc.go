@@ -425,7 +425,18 @@ func tagToMap(tag string) map[string]*string {
 			m[pair[0]] = nil
 			continue
 		}
-		m[pair[0]] = &pair[1]	// Maybe we should coalesce pair[1:] instead?
+		m[pair[0]] = &pair[1]	// Maybe we should concatenate pair[1:] instead?
 	}
 	return m
+}
+
+// We could make this variadic, but so far I haven't felt the need to
+func coalesce(e1, e2 error) error {
+	if e1 == nil {
+		return e2
+	}
+	if e2 == nil {
+		return e1
+	}
+	return fmt.Errorf("%w; %w", e1, e2)
 }
