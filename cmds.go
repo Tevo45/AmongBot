@@ -174,41 +174,6 @@ func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 /*** Servers ***/
 
 func srvHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
-	names := ""
-	em := map[string]*discordgo.Emoji{}
-	wrks := make([]chan string, 0)
-	// TODO GIFs
-	for _, g := range s.State.Guilds {
-		chann := make(chan string, 1)
-		wrks = append(wrks, chann)
-		go func(c chan string, g *discordgo.Guild) {
-			e := registerGuildEmoji(s, g)
-			ret := ""
-
-			if e != nil {
-				em[g.ID] = e
-				ret += e.MessageFormat()
-			} else {
-				ret += "<:default:761420942072610817>"
-			}
-			ret += fmt.Sprintf("** ∙ %s**\n", g.Name)
-			c <- ret
-		}(chann, g)
-	}
-	for _, c := range wrks {
-		names += <-c
-	}
-	s.ChannelMessageSend(m.ChannelID, names)
-	for srv, emoji := range em {
-		// FIXME Paralelize removal
-		err := s.GuildEmojiDelete(conf.EmoteGuild, emoji.ID)
-		if err != nil {
-			fmt.Printf("failed to remove listing emoji for guild %s: %s\n", srv, err)
-		}
-	}
-}
-
-func newSrvHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	reactionSlider(s, m.ChannelID, guildProvider(s), nil)
 }
 
@@ -280,8 +245,16 @@ func testMenuHandler(args []string, s *discordgo.Session, m *discordgo.MessageCr
 }
 
 func premiumHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
-	if len(args) < 0 {
-		// Add stuff
+	if len(args) == 2 {
+		state.Premium.Servers = append(state.Premium.Servers, premiumMembership{args[0], args[1]})
+		return
 	}
 	s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("premium servers: %v", state.GetPremiumGuilds()))
+}
+
+func saveHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	err := saveState()
+	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Error while saving state: %s", err))
+	}
 }

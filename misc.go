@@ -373,6 +373,27 @@ func (p *srvProvider) Get(idx, c int) (r []menuEntry) {
 	if idx > p.Len() {
 		return
 	}
+	pr := state.GetPremiumGuilds()
+	fmt.Println(pr)
+	if len(pr) > idx {
+		for i := idx; i < len(pr) && c != 0; i++ {
+			fmt.Println(i)
+			g, err := p.session.Guild(pr[i].ID)
+			fmt.Println(g, err)
+			if err != nil {
+				fmt.Println("Unable to fetch guild:", err)
+				continue
+			}
+			r = append(r, &srvItem{
+				session: p.session,
+				guild: g,
+				premium: true,
+				premiumUrl: pr[i].InviteURL,
+			})
+			c--
+		}
+	}
+	// FIXME Premium guilds show up 2 times in the menu
 	gl := p.session.State.Guilds[idx:]
 	if len(gl) > c {
 		gl = gl[:c]
@@ -390,9 +411,12 @@ func (p *srvProvider) Len() int {
 type srvItem struct {
 	session *discordgo.Session
 	guild   *discordgo.Guild
+	premium bool
+	premiumUrl string
 }
 
 func (i *srvItem) Content() (s string) {
+/*
 	e := registerGuildEmoji(i.session, i.guild)
 	if e != nil {
 		go func() {
@@ -409,7 +433,13 @@ func (i *srvItem) Content() (s string) {
 	} else {
 		s += "<:default:761420942072610817>" // TODO Move this to a resource file
 	}
-	s += fmt.Sprintf("∙ %s", i.guild.Name)
+*/
+	s += "<:default:761420942072610817>"
+	if i.premium {
+		s += fmt.Sprintf("• [%s](%s) - <:pr:761394323778437121><:em:761393700177575978><:iu:761393724365209620><:m_:761393746385829938>", i.guild.Name, i.premiumUrl)	// TODO Same as above
+	} else {
+		s += fmt.Sprintf("∙ %s", i.guild.Name)
+	}
 	return
 }
 

@@ -41,10 +41,6 @@ func main() {
 	commands.add("ping", "veja se estou vivo!", pingHandler)
 	commands.add("play", "like, matchmaking bro‽", matchHandler)
 
-	commands.add("tm", "☭", testMenuHandler)
-	commands.add("srv", "yes", newSrvHandler)
-	commands.add("prm", "♟", premiumHandler)
-
 	err = dg.Open()
 	if err != nil {
 		fmt.Println("Unable to open session:", err)
@@ -58,6 +54,7 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
 
+	saveState()
 	dg.Close()
 }
 

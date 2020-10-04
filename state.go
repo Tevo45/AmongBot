@@ -13,20 +13,25 @@ import (
 )
 
 type persistentState struct {
-	Premium premiumMemberships	`format:toml location:premium.toml`
+	Premium premiumMemberships	`format:json location:premium.json`
 	GuildPrefs map[string]*guildPrefs	`directory location:guild-props`
 }
 
 // TODO Automate this
 type premiumMemberships struct {
-	Servers []string
+	Servers []premiumMembership
+}
+
+type premiumMembership struct {
+	ID string
+	InviteURL string
 }
 
 type guildPrefs struct {
 	PlayChan string
 }
 
-func (s *persistentState) GetPremiumGuilds() []string {
+func (s *persistentState) GetPremiumGuilds() []premiumMembership {
 	return s.Premium.Servers
 }
 
@@ -118,7 +123,7 @@ func saveField(absField reflect.StructField, concField reflect.Value) (err error
 	case "toml":
 		buf, err = toml.Marshal(concField.Interface())
 	case "json":
-		buf, err = json.Marshal(concField.Interface())
+		buf, err = json.MarshalIndent(concField.Interface(), "", "\t")
 	default:
 		err = errors.New("Unsupported format: " + format)
 		return
@@ -214,7 +219,7 @@ func tryLoadField(absField reflect.StructField, concField reflect.Value) (err er
 			return
 		}
 	case "json":
-		err = toml.Unmarshal(buf, concField.Addr().Interface())
+		err = json.Unmarshal(buf, concField.Addr().Interface())
 		if err != nil {
 			return
 		}
