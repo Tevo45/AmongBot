@@ -119,9 +119,9 @@ func inviteHandler(args []string, s *discordgo.Session, m *discordgo.MessageCrea
 func prmHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	s.ChannelMessageSendEmbed(m.ChannelID,
 		&discordgo.MessageEmbed{
-			Title: "<a:premium:762481446199361607> AmongBot' Premium Update",
+			Title:       "<a:premium:762481446199361607> AmongBot' Premium Update",
 			Description: fmt.Sprintf("• *Deseja saber as informações de como se tornar premium* \n*e quais as vantagens? você pode me chamar em:* <@508719784381382706>. \n• *Ou entrar em nosso servidor de support utilizando o comando %sinvite*", conf.Prefix),
-			Color: 0xFFCC00,
+			Color:       0xFFCC00,
 			Thumbnail: &discordgo.MessageEmbedThumbnail{
 				URL: "https://pdhl.s-ul.eu/5902ngBb"}})
 }
@@ -265,14 +265,14 @@ func matchHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 	pc := state.GetGuildPrefs(m.GuildID).PlayChan
 	if _, err := s.Channel(pc); err != nil {
 		s.ChannelMessageSend(m.ChannelID,
-			"<a:load:758855839497977857>  Você precisa setar um canal primeiro, utlize %playchan <canal>")
+			fmt.Sprintf("<a:load:758855839497977857> *Você precisa setar um canal primeiro, utilize* `%splaychan <canal>`", conf.Prefix))
 		return
 	}
 	if m.ChannelID != pc {
 		msg, _ := s.ChannelMessageSend(m.ChannelID,
 			fmt.Sprintf("%s <#%s>", m.Author.Mention(), pc))
 		if msg != nil {
-			go selfDestruct(s, msg, time.After(10 * time.Second))
+			go selfDestruct(s, msg, time.After(10*time.Second))
 		}
 		return
 	}
@@ -317,18 +317,18 @@ func matchHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 }
 
 func playChanHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
-	can, err := MemberHasPermission(s, m.GuildID, m.Author.ID, 
-		discordgo.PermissionManageChannels | discordgo.PermissionAdministrator | discordgo.PermissionManageServer)
+	can, err := MemberHasPermission(s, m.GuildID, m.Author.ID,
+		discordgo.PermissionManageChannels|discordgo.PermissionAdministrator|discordgo.PermissionManageServer)
 	if err != nil {
-		s.ChannelMessageSend(m.ChannelID, "Putz man, sla se da cara")
+		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Ops, parece que houve um erro, por favor tente novamente.*")
 		return
 	}
 	if !can {
-		s.ChannelMessageSend(m.ChannelID, "Putz man, só adm")
+		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Uhhh, acho que você não tem permissão para fazer isso.*")
 		return
 	}
 	if len(args) < 1 {
-		s.ChannelMessageSend(m.ChannelID, "Cadê o canal po")
+		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Uhh, acredito que você tenha esquecido de adicionar um canal valido.*")
 		return
 	}
 	var chann *discordgo.Channel
@@ -344,11 +344,11 @@ func playChanHandler(args []string, s *discordgo.Session, m *discordgo.MessageCr
 		chann, _ = s.Channel(args[0])
 	}
 	if chann == nil {
-		s.ChannelMessageSend(m.ChannelID, "Cadê o canal man?")
+		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Por favor, informe o canal corretamente.*")
 		return
 	}
 	state.GetGuildPrefs(m.GuildID).PlayChan = chann.ID
-	s.ChannelMessageSend(m.ChannelID, "Tudo certo man")
+	s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Canal adicionado com sucesso!*")
 }
 
 /*** ***/

@@ -45,12 +45,11 @@ func main() {
 
 	commands.Add("play", "cria um convite de matchmaking.", matchHandler)
 
-	commands.Add("playchan", 
+	commands.Add("playchan",
 		"configura o canal aonde individuos podem utilizar"+conf.Prefix+"play", playChanHandler)
 	commands.Alias("playset", "playchan")
 
 	commands.Add("premium", "mostra as informações para se tornar premium.", prmHandler)
-
 
 	err = dg.Open()
 	if err != nil {

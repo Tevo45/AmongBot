@@ -478,7 +478,7 @@ func hasPermissions(s *discordgo.Session, m *discordgo.Member, perms int) bool {
 			fmt.Printf("Unable to fetch role %s: %s\n", rId, err)
 			continue
 		}
-		if role.Permissions & perms != 0 {
+		if role.Permissions&perms != 0 {
 			return true
 		}
 	}
@@ -494,8 +494,8 @@ func MemberHasPermission(s *discordgo.Session, guildID string, userID string, pe
 		}
 	}
 
-    // Iterate through the role IDs stored in member.Roles
-    // to check permissions
+	// Iterate through the role IDs stored in member.Roles
+	// to check permissions
 	for _, roleID := range member.Roles {
 		role, err := s.State.Role(guildID, roleID)
 		if err != nil {
