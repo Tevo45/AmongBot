@@ -114,6 +114,18 @@ func inviteHandler(args []string, s *discordgo.Session, m *discordgo.MessageCrea
 				URL: "https://pdhl.s-ul.eu/FX37PeEg"}})
 }
 
+/*** Premium ***/
+
+func prmHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	s.ChannelMessageSendEmbed(m.ChannelID,
+		&discordgo.MessageEmbed{
+			Title: "<a:premium:762481446199361607> AmongBot' Premium Update",
+			Description: fmt.Sprintf("• *Deseja saber as informações de como se tornar premium* \n*e quais as vantagens? você pode me chamar em:* <@508719784381382706>. \n• *Ou entrar em nosso servidor de support utilizando o comando %sinvite*", conf.Prefix),
+			Color: 0xFFCC00,
+			Thumbnail: &discordgo.MessageEmbedThumbnail{
+				URL: "https://pdhl.s-ul.eu/5902ngBb"}})
+}
+
 /*** Game code ***/
 
 var (

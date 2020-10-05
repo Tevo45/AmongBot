@@ -45,6 +45,8 @@ func main() {
 
 	commands.Add("play", "cria um convite de matchmaking.", matchHandler)
 
+	commands.Add("premium", "mostra as informações para se tornar premium.", prmHandler)
+
 	err = dg.Open()
 	if err != nil {
 		fmt.Println("Unable to open session:", err)
