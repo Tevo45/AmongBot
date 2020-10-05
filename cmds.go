@@ -240,7 +240,11 @@ func helpHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate
 /*** Servers ***/
 
 func srvHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
-	reactionSlider(s, m.ChannelID, guildProvider(s), nil)
+				reactionSlider(s, m.ChannelID, guildProvider(s), styleFunc(
+        func(s *discordgo.MessageEmbed, p, np int) {
+                s.Title = "<a:redbit:759943137581203527> **Servidores'**"
+				s.Color = 0xC02000
+        }))
 }
 
 /*** Play ***/
@@ -303,7 +307,7 @@ func testMenuHandler(args []string, s *discordgo.Session, m *discordgo.MessageCr
 	}
 	reactionSlider(s, m.ChannelID, sliceMenu(stubMenu), styleFunc(
 		func(s *discordgo.MessageEmbed, p, np int) {
-			s.Color = 0xFF0000
+			s.Color = 0xC020000
 		}))
 	//	if err != nil {
 	//		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("error: %s", err))
