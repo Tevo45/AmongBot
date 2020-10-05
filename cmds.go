@@ -262,6 +262,20 @@ func srvHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate)
 /*** Play ***/
 
 func matchHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
+	pc := state.GetGuildPrefs(m.GuildID).PlayChan
+	if _, err := s.Channel(pc); err != nil {
+		s.ChannelMessageSend(m.ChannelID,
+			"<a:load:758855839497977857>  Você precisa setar um canal primeiro, utlize %playchan <canal>")
+		return
+	}
+	if m.ChannelID != pc {
+		msg, _ := s.ChannelMessageSend(m.ChannelID,
+			fmt.Sprintf("%s <#%s>", m.Author.Mention(), pc))
+		if msg != nil {
+			go selfDestruct(s, msg, time.After(10 * time.Second))
+		}
+		return
+	}
 	vs := getVoiceState(s, m.Author.ID, m.GuildID)
 	if vs == nil {
 		s.ChannelMessageSend(m.ChannelID,
@@ -303,7 +317,38 @@ func matchHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 }
 
 func playChanHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
-
+	can, err := MemberHasPermission(s, m.GuildID, m.Author.ID, 
+		discordgo.PermissionManageChannels | discordgo.PermissionAdministrator | discordgo.PermissionManageServer)
+	if err != nil {
+		s.ChannelMessageSend(m.ChannelID, "Putz man, sla se da cara")
+		return
+	}
+	if !can {
+		s.ChannelMessageSend(m.ChannelID, "Putz man, só adm")
+		return
+	}
+	if len(args) < 1 {
+		s.ChannelMessageSend(m.ChannelID, "Cadê o canal po")
+		return
+	}
+	var chann *discordgo.Channel
+	if mcs := m.MentionChannels; len(mcs) != 0 {
+		chann = mcs[0]
+	}
+	if chann == nil {
+		var id uint64
+		fmt.Sscanf(args[0], "<#%d>", &id)
+		chann, _ = s.Channel(strconv.FormatUint(id, 10))
+	}
+	if chann == nil {
+		chann, _ = s.Channel(args[0])
+	}
+	if chann == nil {
+		s.ChannelMessageSend(m.ChannelID, "Cadê o canal man?")
+		return
+	}
+	state.GetGuildPrefs(m.GuildID).PlayChan = chann.ID
+	s.ChannelMessageSend(m.ChannelID, "Tudo certo man")
 }
 
 /*** ***/

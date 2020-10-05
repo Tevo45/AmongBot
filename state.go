@@ -14,7 +14,7 @@ import (
 
 type persistentState struct {
 	Premium    premiumMemberships     `format:json location:premium.json`
-	GuildPrefs map[string]*guildPrefs `directory location:guild-props`
+	GuildPrefs map[string]*guildPrefs `location:guild-props.json`
 }
 
 // TODO Automate this
@@ -33,6 +33,16 @@ type guildPrefs struct {
 
 func (s *persistentState) GetPremiumGuilds() []premiumMembership {
 	return s.Premium.Servers
+}
+
+func (s *persistentState) GetGuildPrefs(id string) *guildPrefs {
+	if s.GuildPrefs == nil {
+		s.GuildPrefs = map[string]*guildPrefs{}
+	}
+	if s.GuildPrefs[id] == nil {
+		s.GuildPrefs[id] = &guildPrefs{}
+	}
+	return s.GuildPrefs[id]
 }
 
 var state = persistentState{}

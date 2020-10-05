@@ -470,3 +470,41 @@ func coalesce(e1, e2 error) error {
 	}
 	return fmt.Errorf("%w; %w", e1, e2)
 }
+
+func hasPermissions(s *discordgo.Session, m *discordgo.Member, perms int) bool {
+	for _, rId := range m.Roles {
+		role, err := s.State.Role(m.GuildID, rId)
+		if err != nil {
+			fmt.Printf("Unable to fetch role %s: %s\n", rId, err)
+			continue
+		}
+		if role.Permissions & perms != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+//  Copy-pasted from https://github.com/bwmarrin/discordgo/wiki/FAQ#determining-if-a-role-has-a-permission
+func MemberHasPermission(s *discordgo.Session, guildID string, userID string, permission int) (bool, error) {
+	member, err := s.State.Member(guildID, userID)
+	if err != nil {
+		if member, err = s.GuildMember(guildID, userID); err != nil {
+			return false, err
+		}
+	}
+
+    // Iterate through the role IDs stored in member.Roles
+    // to check permissions
+	for _, roleID := range member.Roles {
+		role, err := s.State.Role(guildID, roleID)
+		if err != nil {
+			return false, err
+		}
+		if role.Permissions&permission != 0 {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
