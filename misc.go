@@ -398,8 +398,15 @@ func (p *srvProvider) Get(idx, c int) (r []menuEntry) {
 	if len(gl) > c {
 		gl = gl[:c]
 	}
-	for _, g := range gl {
-		r = append(r, &srvItem{session: p.session, guild: g})
+	Loop:
+	for i := 0; i < c && i < len(gl); i++ {
+		for _, g := range pr {
+			if g.ID == gl[i].ID {
+				i++
+				continue Loop
+			}
+		}
+		r = append(r, &srvItem{session: p.session, guild: gl[i]})
 	}
 	return
 }

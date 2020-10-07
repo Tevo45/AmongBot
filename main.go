@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -46,7 +47,7 @@ func main() {
 	commands.Add("play", "cria um convite de matchmaking.", matchHandler)
 
 	commands.Add("playchan",
-		"configura o canal aonde individuos podem utilizar"+conf.Prefix+"play", playChanHandler)
+		"configura o canal aonde individuos podem utilizar "+conf.Prefix+"play", playChanHandler)
 	commands.Alias("playset", "playchan")
 
 	commands.Add("premium", "mostra as informações para se tornar premium.", prmHandler)
@@ -57,7 +58,13 @@ func main() {
 		return
 	}
 
-	dg.UpdateStatus(0, fmt.Sprintf("%shelp | amongbot.tk", conf.Prefix))
+	go func() {
+		 t := time.NewTicker(time.Hour)
+		for {
+			dg.UpdateStatus(0, fmt.Sprintf("%shelp | amongbot.tk", conf.Prefix))
+			<-t.C
+		}
+	}()
 
 	fmt.Println("Bot is up!")
 	sc := make(chan os.Signal, 1)

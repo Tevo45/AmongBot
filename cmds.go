@@ -272,7 +272,7 @@ func matchHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 		msg, _ := s.ChannelMessageSend(m.ChannelID,
 			fmt.Sprintf("%s <#%s>", m.Author.Mention(), pc))
 		if msg != nil {
-			go selfDestruct(s, msg, time.After(10*time.Second))
+			go selfDestruct(s, msg, time.After(15*time.Second))
 		}
 		return
 	}
@@ -319,11 +319,12 @@ func matchHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreat
 func playChanHandler(args []string, s *discordgo.Session, m *discordgo.MessageCreate) {
 	can, err := MemberHasPermission(s, m.GuildID, m.Author.ID,
 		discordgo.PermissionManageChannels|discordgo.PermissionAdministrator|discordgo.PermissionManageServer)
-	if err != nil {
+	guild, err2 := s.Guild(m.GuildID)
+	if err != nil || err2 != nil {
 		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Ops, parece que houve um erro, por favor tente novamente.*")
 		return
 	}
-	if !can {
+	if guild.OwnerID != m.Author.ID && !can {
 		s.ChannelMessageSend(m.ChannelID, "<a:load:758855839497977857> *Uhhh, acho que você não tem permissão para fazer isso.*")
 		return
 	}
